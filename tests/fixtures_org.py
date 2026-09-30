@@ -16,6 +16,7 @@ from aletheia.organizations.keys import LocalDevBackend
 from aletheia.organizations.service import bootstrap_organization
 from aletheia.platform.config import Settings
 from aletheia.platform.db import Database
+from tests.test_schema import COURSE_SCHEMA
 
 OWNER_EMAIL = "owner@example.org"
 OWNER_PASSWORD = "correct horse battery staple"
@@ -97,3 +98,38 @@ def owner_token(client: TestClient, org: dict[str, Any]) -> str:
     r = _login(client, OWNER_EMAIL, OWNER_PASSWORD)
     assert r.status_code == 200, r.text
     return str(r.json()["token"])
+
+
+@pytest.fixture
+def template(client: TestClient, owner_token: str) -> dict[str, Any]:
+    r = client.post(
+        "/v1/templates",
+        json={"slug": "course-completion", "name": "Certificado"},
+        headers=_auth(owner_token),
+    )
+    assert r.status_code == 201, r.text
+    tpl = r.json()
+    r = client.post(
+        f"/v1/templates/{tpl['id']}/versions",
+        json={
+            "claims_schema": COURSE_SCHEMA,
+            "selective_disclosure": [
+                "given_name",
+                "family_name",
+                "completion_date",
+                "course.grade",
+                "student_id",
+            ],
+            "validity_days": 365,
+            "display": {"display": [{"name": "Certificado de curso", "locale": "es"}]},
+        },
+        headers=_auth(owner_token),
+    )
+    assert r.status_code == 201, r.text
+    ver = r.json()
+    assert ver["state"] == "draft"
+    r = client.post(
+        f"/v1/templates/{tpl['id']}/versions/{ver['id']}/publish", headers=_auth(owner_token)
+    )
+    assert r.status_code == 200 and r.json()["state"] == "published"
+    return tpl

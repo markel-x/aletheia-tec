@@ -6,7 +6,7 @@ porque los consumen wallets, no integradores de la API ``/v1``.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Form, Header, Request
@@ -17,8 +17,10 @@ from sqlalchemy.orm import Session
 
 from ..api.deps import BackendDep, EncryptorDep, SessionDep
 from ..api.routing import TransactionalRoute
+from ..authz.service import network_prefix
 from ..db import models
 from ..organizations.service import issuer_url, published_jwks
+from ..platform import ratelimit
 from ..platform.config import Settings
 from ..platform.errors import NotFound
 from ..vc import OID4VCI_PROOF_TYP
@@ -30,6 +32,8 @@ router = APIRouter(route_class=TransactionalRoute, tags=["oid4vci"])
 
 PRE_AUTHORIZED_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code"
 PROOF_MAX_AGE = 300
+TOKEN_RATE_LIMIT = 60
+TOKEN_RATE_WINDOW = timedelta(minutes=15)
 NO_STORE = {"Cache-Control": "no-store"}
 
 
@@ -117,6 +121,18 @@ def token(
     tx_code: Annotated[str | None, Form()] = None,
 ) -> JSONResponse:
     try:
+        # Freno adicional al bloqueo por oferta: por red de origen (ADR-0008).
+        prefix = network_prefix(request.client.host if request.client else None)
+        if prefix:
+            try:
+                ratelimit.hit(
+                    session,
+                    f"oid4vci:token:{prefix}",
+                    limit=TOKEN_RATE_LIMIT,
+                    window=TOKEN_RATE_WINDOW,
+                )
+            except ratelimit.RateLimited as exc:
+                raise OidError("slow_down", "too many token requests", 429) from exc
         if grant_type != PRE_AUTHORIZED_GRANT:
             raise OidError(
                 "unsupported_grant_type", "only the pre-authorized code grant is supported"

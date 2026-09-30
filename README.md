@@ -3,10 +3,10 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 4 de 6** — plantillas versionadas, ofertas con `tx_code` y claims cifrados,
-> entrega OID4VCI 1.0 (pre-autorizado), emisión SD-JWT VC, Token Status List, revocación, consumo
-> (ver `docs/incrementos/04.md`). Todavía **no** hay verificación por API (`/v1/verifications`),
-> panel ni despliegue en AWS.
+> Estado: **incremento 5 de 6** — verificación por API (políticas de confianza, solicitudes de
+> presentación, `/v1/verifications` con emisores alojados y externos), panel administrativo en
+> `/admin`, `Authorize` en Swagger (ver `docs/incrementos/05.md`). Pendiente: despliegue en AWS
+> (Terraform), prueba con wallet real, RLS.
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -28,6 +28,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
 | [`docs/incrementos/04.md`](docs/incrementos/04.md) | Reporte del incremento 4 |
+| [`docs/incrementos/05.md`](docs/incrementos/05.md) | Reporte del incremento 5 |
 
 ## Estructura
 
@@ -41,6 +42,8 @@ src/aletheia/audit/          Registro append-only de acciones sensibles
 src/aletheia/issuance/       Plantillas, esquema de claims, ofertas, OID4VCI, emisión, revocación
 src/aletheia/status/         Asignación de índices y Token Status List (`/status-lists/{id}`)
 src/aletheia/usage/          Consumo por organización (`/v1/usage`)
+src/aletheia/verification/   Políticas de confianza, solicitudes de presentación, verificaciones, resolvers
+src/aletheia/admin/          Panel estático (`/admin`): HTML + módulos ES, sin build, CSP estricta
 src/aletheia/db/models.py    Modelo ORM (SQLAlchemy 2) — espejo de docs/03
 src/aletheia/db/migrations/  Alembic; el DDL inicial vive en `sql/0001_initial_schema.sql`
 src/aletheia/maintenance.py  Purga programada de datos caducados (ADR-0008)
@@ -68,6 +71,11 @@ docker compose run --rm demo        # emisión → verificación → revocación
 docker compose run --rm maintenance # purga de datos caducados
 docker run --rm aletheia:runtime    # {"version": "0.1.0", "profile": "ALT-P1"}
 ```
+
+### Panel y documentación interactiva
+
+- Panel: **http://127.0.0.1:8008/admin/** (inicie sesión con el correo y la contraseña del propietario).
+- Swagger UI: **http://127.0.0.1:8008/docs** (botón *Authorize* → pegue el token `st_…` o una clave `ak_…`).
 
 ### Primera organización y uso de la API
 
@@ -99,6 +107,14 @@ curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        #
 | `GET /.well-known/openid-credential-issuer/issuers/{org}`, `GET /.well-known/oauth-authorization-server/issuers/{org}` | público |
 | `GET /oid4vci/offers/{offer_id}`, `POST /oid4vci/token`, `POST /oid4vci/nonce`, `POST /oid4vci/credential` | wallet (OID4VCI) |
 | `GET /status-lists/{public_id}` | público, cacheable (`ttl` 300 s) |
+| `GET /v1/trust-policies`, `GET /v1/trust-policies/{id}`, `POST /v1/presentation-requests`, `POST/GET /v1/verifications` | `verifications:create` |
+| `POST /v1/trust-policies`, `POST/DELETE /v1/trust-policies/{id}/issuers[/{tid}]` | `trust_policies:write` |
+
+Flujo de verificación: `POST /v1/presentation-requests` devuelve `nonce` y `aud` (10 min, un uso); el
+titular presenta `SD-JWT~disclosures~KB-JWT` con ese `aud`/`nonce`; `POST /v1/verifications` ejecuta
+las 11 comprobaciones del núcleo (claves y estado de emisores alojados desde la base; externos por
+HTTPS con límites y caché) y devuelve `valid` / `invalid` / `indeterminate` con el detalle y los
+claims divulgados. Se registra el resultado, nunca los claims.
 
 Flujo de emisión: `POST /v1/credentials` devuelve `offer_uri` (para QR/enlace), `qr_svg` y `tx_code`
 (**una sola vez**; se envía al titular por otro canal). El wallet resuelve la oferta, canjea el código

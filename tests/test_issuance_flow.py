@@ -53,41 +53,6 @@ def app_settings(db_settings: Settings) -> Settings:
     return db_settings.model_copy(update={"public_base_url": HttpUrl("https://aletheia.test")})
 
 
-@pytest.fixture
-def template(client: TestClient, owner_token: str) -> dict[str, Any]:
-    r = client.post(
-        "/v1/templates",
-        json={"slug": "course-completion", "name": "Certificado"},
-        headers=_auth(owner_token),
-    )
-    assert r.status_code == 201, r.text
-    tpl = r.json()
-    r = client.post(
-        f"/v1/templates/{tpl['id']}/versions",
-        json={
-            "claims_schema": COURSE_SCHEMA,
-            "selective_disclosure": [
-                "given_name",
-                "family_name",
-                "completion_date",
-                "course.grade",
-                "student_id",
-            ],
-            "validity_days": 365,
-            "display": {"display": [{"name": "Certificado de curso", "locale": "es"}]},
-        },
-        headers=_auth(owner_token),
-    )
-    assert r.status_code == 201, r.text
-    ver = r.json()
-    assert ver["state"] == "draft"
-    r = client.post(
-        f"/v1/templates/{tpl['id']}/versions/{ver['id']}/publish", headers=_auth(owner_token)
-    )
-    assert r.status_code == 200 and r.json()["state"] == "published"
-    return tpl
-
-
 class HostedIssuer:
     """Resolvedor y fetcher del verificador del núcleo contra la API real."""
 

@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterator
 from typing import Annotated
 
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from ..authz.permissions import Permission
@@ -48,12 +49,23 @@ def get_encryptor(request: Request) -> DataEncryptor:
     return encryptor
 
 
-def get_principal(request: Request, session: Annotated[Session, Depends(get_session)]) -> Principal:
-    header = request.headers.get("Authorization", "")
-    scheme, _, token = header.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
+# auto_error=False: el error lo produce esta capa con el formato estable de la API.
+# Declararlo como esquema de seguridad hace que Swagger UI ofrezca "Authorize".
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    scheme_name="bearer",
+    description="Token de sesión (st_…) o clave de API (ak_…)",
+)
+
+
+def get_principal(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
+) -> Principal:
+    if credentials is None or not credentials.credentials.strip():
         raise Unauthorized("Missing bearer token")
-    principal = authenticate(session, token.strip())
+    principal = authenticate(session, credentials.credentials.strip())
     request.state.principal = principal
     return principal
 

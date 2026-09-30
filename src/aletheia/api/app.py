@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from .. import __version__
+from ..admin import router as admin_router
 from ..authz import router as authz_router
 from ..issuance import oid4vci as oid4vci_router
 from ..issuance import router as issuance_router
@@ -28,6 +29,7 @@ from ..platform.logging import configure_logging
 from ..platform.middleware import RequestContextMiddleware
 from ..status import router as status_router
 from ..usage import router as usage_router
+from ..verification import router as verification_router
 from . import operations
 
 log = logging.getLogger(__name__)
@@ -78,4 +80,6 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
     app.include_router(oid4vci_router.router)
     app.include_router(status_router.router)
     app.include_router(usage_router.router)
+    app.include_router(verification_router.router)
+    app.include_router(admin_router.router)
     return app

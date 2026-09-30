@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aletheia · Panel</title>
+  <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="#/credentials">Aletheia</a>
+    <nav id="nav" hidden>
+      <a href="#/credentials">Credenciales</a>
+      <a href="#/templates">Plantillas</a>
+      <a href="#/verify">Verificación</a>
+      <a href="#/members">Miembros</a>
+      <a href="#/api-clients">Claves de API</a>
+      <a href="#/signing-keys">Claves de firma</a>
+      <a href="#/audit">Auditoría</a>
+      <a href="#/usage">Consumo</a>
+    </nav>
+    <div id="who" class="who"></div>
+  </header>
+  <main id="app"><p class="muted">Cargando…</p></main>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/admin/static/app.js"></script>
+</body>
+</html>

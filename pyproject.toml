@@ -42,6 +42,7 @@ required-version = ">=0.12"
 # Los .sql y .mako de las migraciones viajan con el paquete.
 "src/aletheia/db/migrations/sql" = "aletheia/db/migrations/sql"
 "src/aletheia/db/migrations/script.py.mako" = "aletheia/db/migrations/script.py.mako"
+"src/aletheia/admin/static" = "aletheia/admin/static"
 
 [build-system]
 requires = ["hatchling>=1.25"]
