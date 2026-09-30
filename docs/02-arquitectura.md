@@ -202,7 +202,7 @@ Las claves de API tienen un subconjunto explícito de permisos (nunca `members:m
 
 | Capa | Elección | Motivo |
 |---|---|---|
-| Lenguaje / framework | Python 3.12, FastAPI, Pydantic v2 | Fijado. OpenAPI generado desde los modelos. |
+| Lenguaje / framework | Python 3.13 (imagen `python:3.13.15-slim-trixie`), FastAPI, Pydantic v2 | Fijado. OpenAPI generado desde los modelos. |
 | Persistencia | PostgreSQL 16, SQLAlchemy 2 (sync), Alembic, psycopg 3 | Fijado. Sync por simplicidad; la carga del MVP no justifica async. |
 | Criptografía | `cryptography`, `PyJWT`, AWS KMS | Mantenidas; ver ADR-0003/0006. |
 | Hash de contraseñas | `argon2-cffi` (Argon2id) | Recomendación OWASP. |

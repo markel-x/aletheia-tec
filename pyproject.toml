@@ -5,11 +5,15 @@ description = "Plataforma para emitir, administrar y verificar credenciales digi
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Propietario" }
-# Rangos mínimos. Las versiones exactas se fijan en uv.lock (incremento 2;
-# requiere acceso a PyPI, no disponible en el entorno del incremento 1).
+# Núcleo actual. Versiones exactas para contenedores en requirements/*.txt.
 dependencies = [
   "cryptography>=46.0.7",
   "PyJWT>=2.12.1",
+]
+
+[project.optional-dependencies]
+# API y persistencia: se incorporan en el incremento 2 (con uv.lock).
+api = [
   "pydantic>=2.13",
   "pydantic-settings>=2.14",
   "fastapi>=0.115",
@@ -22,12 +26,14 @@ dependencies = [
   "httpx>=0.28",
 ]
 
+[project.scripts]
+aletheia = "aletheia.cli:main"
+
 [dependency-groups]
 dev = [
-  "pytest>=9.0",
-  "ruff>=0.15",
-  "mypy>=1.13",
-  "moto[kms]>=5.0",
+  "pytest>=9.0.3",
+  "ruff>=0.15.11",
+  "mypy>=1.20.2",
 ]
 
 [build-system]
@@ -62,4 +68,5 @@ ignore = ["RUF001", "RUF002", "RUF003"]  # textos en español con tildes/ñ
 python_version = "3.11"
 strict = true
 packages = ["aletheia.vc"]
+modules = ["aletheia.cli"]
 mypy_path = "src"

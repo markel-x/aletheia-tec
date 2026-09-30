@@ -8,12 +8,12 @@ Estado: incremento 1 · Fecha: 2026-09-30
 |---|---|---|
 | Repositorio | No existía repositorio ni documentación previa. Se creó `aletheia/` desde cero. | No hay stack heredado; rige el stack obligatorio (Python + Terraform/AWS). |
 | Proyecto de Claude "Aletheia" | Sin documentos. | Sin restricciones adicionales. |
-| Python | 3.11.15 disponible (también 3.12 y 3.13). | Código compatible con ≥ 3.11; imagen de producción en 3.12. |
+| Python | 3.11.15 disponible (también 3.12 y 3.13). | Código compatible con ≥ 3.11; imagen de contenedor en 3.13 (ADR-0011). |
 | Paquetes presentes | `cryptography` 46.0.7, `PyJWT` 2.12.1, `pydantic` 2.13, `starlette` 1.0, `httpx`, `uvicorn`; herramientas `pytest` 9.0.3, `ruff` 0.15.11, `mypy`. | El núcleo criptográfico se puede probar aquí. |
 | Paquetes ausentes | FastAPI, SQLAlchemy, Alembic, psycopg, boto3, moto. | **Bloqueante para los incrementos 2–6 en este entorno** (ver §5). |
 | Registros de paquetes | PyPI, npm, GitHub, registry.terraform.io y releases.hashicorp.com responden 403 (política de salida de red). | No se pueden instalar dependencias ni Terraform aquí. |
 | PostgreSQL | Binarios de PostgreSQL 16 presentes (`initdb`, `pg_ctl`). | Utilizable para pruebas locales cuando exista un driver de Python. |
-| Docker | Cliente presente, daemon no disponible. | `docker compose` se entrega pero no se ejecuta aquí. |
+| Docker | Docker 29.4.3; el daemon puede iniciarse, pero Docker Hub y ECR Public responden 403. | Las imágenes no pueden construirse aquí con la imagen base oficial; se validaron con una base sustituta (ver ADR-0011). |
 
 ## 2. Caso de uso inicial (supuesto configurable)
 

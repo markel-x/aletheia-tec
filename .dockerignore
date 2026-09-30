@@ -1,0 +1,8 @@
+# Sólo entra al contexto lo que las imágenes necesitan.
+*
+!pyproject.toml
+!requirements/
+!src/
+!tests/
+**/__pycache__
+**/*.py[cod]

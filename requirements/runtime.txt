@@ -1,0 +1,7 @@
+# Dependencias de ejecución del núcleo (aletheia.vc), fijadas con todas sus
+# transitivas. Se instalan con --no-deps: si falta una transitiva, el build falla.
+# Se reemplazará por uv.lock con hashes en el incremento 2.
+cryptography==46.0.7
+cffi==2.0.0
+pycparser==3.0
+PyJWT==2.12.1

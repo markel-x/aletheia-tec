@@ -1,0 +1,12 @@
+# Herramientas de prueba y calidad (sólo imagen "test"), fijadas con transitivas.
+pytest==9.0.3
+iniconfig==2.3.0
+packaging==26.1
+pluggy==1.6.0
+pygments==2.20.0
+ruff==0.15.11
+mypy==1.20.2
+librt==0.9.0
+mypy_extensions==1.1.0
+pathspec==1.1.0
+typing_extensions==4.15.0
