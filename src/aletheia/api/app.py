@@ -31,6 +31,7 @@ from ..status import router as status_router
 from ..usage import router as usage_router
 from ..verification import oid4vp as oid4vp_verifier
 from ..verification import router as verification_router
+from ..verification.identity import load_identity
 from . import operations
 
 log = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         has_db = settings.database_url is not None
         app.state.signer_backend = build_backend(settings, kms_client) if has_db else None
         app.state.encryptor = build_encryptor(settings, kms_client) if has_db else None
+        app.state.verifier_identity = load_identity(settings) if has_db else None
         if has_db:
             tx_code_key(settings)  # falla al arrancar si falta la clave en un entorno desplegado
         log.info(

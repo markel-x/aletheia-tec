@@ -91,6 +91,15 @@ variable "alarm_email" {
   default     = ""
 }
 
+variable "verifier_identity_secret_arn" {
+  description = <<-EOT
+    Secreto de Secrets Manager (JSON con key_pem y cert_chain_pem) con la clave P-256 y el
+    certificado del verificador OID4VP (ADR-0015). Vacío: sólo solicitudes OID4VP sin firmar.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "github_repository" {
   description = "Repositorio autorizado a desplegar por OIDC (owner/repo)."
   type        = string

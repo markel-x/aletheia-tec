@@ -355,22 +355,29 @@ views.verify = async () => {
       w.appendChild(form([
         { name: "trust_policy_id", label: "Política", type: "select", options: withVct.map((p) => ({ value: p.id, label: p.name })) },
         { name: "claims", label: "Claims a pedir (rutas separadas por coma; vacío = los requeridos por la política)", placeholder: "family_name, course.grade" },
+        { name: "client_id_scheme", label: "Identificación del verificador", type: "select", options: [
+          { value: "x509_hash", label: "x509_hash — solicitud firmada (HAIP)" },
+          { value: "x509_san_dns", label: "x509_san_dns — solicitud firmada, dominio en el certificado" },
+          { value: "redirect_uri", label: "redirect_uri — sin firmar (sólo wallets que lo admitan)" },
+        ] },
+        { name: "encrypt_response", label: "Cifrar la respuesta del wallet (direct_post.jwt)", type: "checkbox", checked: true },
       ], "Crear solicitud OID4VP", async (d) => {
-        const body = { trust_policy_id: d.trust_policy_id };
+        const body = { trust_policy_id: d.trust_policy_id, client_id_scheme: d.client_id_scheme, encrypt_response: d.encrypt_response };
         const paths = d.claims.split(",").map((x) => x.trim()).filter(Boolean).map((x) => x.split("."));
         if (paths.length) body.claims = paths;
         const r = await api("POST", "/v1/oid4vp/requests", body);
         const out = document.createElement("div");
         out.innerHTML = `<div class="row"><div class="qr"><img alt="QR OID4VP" src="${r.qr_svg}"></div>
           <div><p><b>Estado:</b> <span data-state>${tag(r.status)}</span></p>
-          <p class="muted">Expira ${fmt(r.expires_at)} · pide: <code>${esc(JSON.stringify(r.dcql_query.credentials[0].claims ?? []))}</code></p>
+          <p class="muted">Expira ${fmt(r.expires_at)} · ${esc(r.client_id_scheme)} · ${esc(r.response_mode)} · pide: <code>${esc(JSON.stringify(r.dcql_query.credentials[0].claims ?? []))}</code></p>
           <p><b>Enlace (mismo dispositivo):</b><br><code>${esc(r.request_uri)}</code></p><div data-result></div></div></div>`;
         w.appendChild(out);
         const until = new Date(r.expires_at).getTime();
         const poll = async () => {
           if (!document.body.contains(out)) return; // se cambió de vista
           const st = await api("GET", `/v1/oid4vp/requests/${r.id}`).catch(() => null);
-          if (st) out.querySelector("[data-state]").innerHTML = tag(st.status) + (st.error ? ` <span class="muted">${esc(st.error)}</span>` : "");
+          if (st) out.querySelector("[data-state]").innerHTML = tag(st.status) + (st.error ? ` <span class="muted">${esc(st.error)}</span>` : "") +
+            (st.status === "pending" && st.request_fetched ? ` <span class="muted">(el wallet descargó la solicitud)</span>` : "");
           if (st && st.status !== "pending") {
             const res = st.result;
             out.querySelector("[data-result]").innerHTML = res

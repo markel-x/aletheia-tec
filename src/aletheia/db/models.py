@@ -507,6 +507,15 @@ class Oid4vpSession(Base):
     result_key_ref: Mapped[str | None] = mapped_column(Text)
     completed_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = _created_at()
+    client_id_scheme: Mapped[str] = mapped_column(Text, server_default=text("'redirect_uri'"))
+    response_mode: Mapped[str] = mapped_column(Text, server_default=text("'direct_post'"))
+    request_ref: Mapped[str | None] = mapped_column(Text, unique=True)
+    request_object: Mapped[str | None] = mapped_column(Text)
+    request_fetched_at: Mapped[datetime | None]
+    response_kid: Mapped[str | None] = mapped_column(Text, unique=True)
+    response_key_ciphertext: Mapped[bytes | None]
+    response_key_encrypted_key: Mapped[bytes | None]
+    response_key_ref: Mapped[str | None] = mapped_column(Text)
 
 
 class RateLimitBucket(Base):

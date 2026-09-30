@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     oid4vci_token_rate_limit: int = Field(default=60, ge=1)
     """Canjes por red (/24, /64) cada 15 min en ``/oid4vci/token``."""
 
+    verifier_key_pem: SecretStr | None = None
+    """Clave P-256 (PEM) que firma las solicitudes OID4VP (x509_san_dns / x509_hash)."""
+
+    verifier_cert_chain_pem: str | None = None
+    """Cadena PEM del verificador, hoja primero. Sin ella, sólo solicitudes sin firmar."""
+
     tx_code_key: SecretStr | None = None
     """Clave HMAC (≥ 32 bytes, base64url) de los ``tx_code``. Obligatoria en entornos
     desplegados (Secrets Manager); en desarrollo se genera en ``dev_keys_dir``."""

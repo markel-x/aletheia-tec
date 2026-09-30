@@ -81,6 +81,22 @@ def run_maintenance(session: Session, now: datetime | None = None) -> dict[str, 
         .where(models.Oid4vpSession.completed_at < now - timedelta(minutes=10))
         .values(result_ciphertext=None, result_encrypted_key=None, result_key_ref=None),
     )
+    # Solicitudes firmadas (nonce/state en claro) y claves de respuesta de sesiones vencidas.
+    counts["oid4vp_request_material"] = _affected(
+        session,
+        update(models.Oid4vpSession)
+        .where(models.Oid4vpSession.created_at < now - timedelta(minutes=15))
+        .where(
+            (models.Oid4vpSession.request_object.is_not(None))
+            | (models.Oid4vpSession.response_key_ciphertext.is_not(None))
+        )
+        .values(
+            request_object=None,
+            response_key_ciphertext=None,
+            response_key_encrypted_key=None,
+            response_key_ref=None,
+        ),
+    )
     counts["idempotency_records"] = _affected(
         session,
         delete(models.IdempotencyRecord).where(models.IdempotencyRecord.expires_at < now),

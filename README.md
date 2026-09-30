@@ -3,11 +3,11 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 7** — presentación desde wallets estándar con **OID4VP 1.0** (DCQL,
-> `direct_post`), además de lo anterior: emisión OID4VCI, verificación, RLS, interoperabilidad con
-> `@sd-jwt/sd-jwt-vc` en ambos sentidos, infraestructura AWS en Terraform (validada, **no aplicada**).
-> Ver `docs/incrementos/07.md`. Pendiente: desplegar en AWS, KMS real, prueba con un wallet real,
-> solicitudes OID4VP firmadas (x509).
+> Estado: **incremento 8** — OID4VP 1.0 con solicitudes **firmadas** (`x509_hash`, `x509_san_dns`) y
+> respuestas **cifradas** (`direct_post.jwt`), además de: emisión OID4VCI, verificación, RLS,
+> interoperabilidad con `@sd-jwt/sd-jwt-vc` y `jose`, infraestructura AWS en Terraform (validada,
+> **no aplicada**). Ver `docs/incrementos/08.md`. Pendiente: desplegar en AWS, KMS real, prueba con un
+> wallet real y certificado de verificador reconocido.
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -24,7 +24,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0014 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0015 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
@@ -32,6 +32,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/incrementos/05.md`](docs/incrementos/05.md) | Reporte del incremento 5 |
 | [`docs/incrementos/06.md`](docs/incrementos/06.md) | Reporte del incremento 6: evidencia, criterios de aceptación, pendientes |
 | [`docs/incrementos/07.md`](docs/incrementos/07.md) | Reporte del incremento 7: OID4VP |
+| [`docs/incrementos/08.md`](docs/incrementos/08.md) | Reporte del incremento 8: OID4VP firmado y cifrado |
 | [`docs/runbook.md`](docs/runbook.md) | Operación: despliegue, reversión, alarmas, claves, secretos, restauración |
 | [`loadtest/README.md`](loadtest/README.md) | Prueba de carga: resultados y lectura |
 
@@ -118,7 +119,8 @@ curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        #
 | `GET /v1/trust-policies`, `GET /v1/trust-policies/{id}`, `POST /v1/presentation-requests`, `POST/GET /v1/verifications` | `verifications:create` |
 | `POST /v1/trust-policies`, `POST/DELETE /v1/trust-policies/{id}/issuers[/{tid}]` | `trust_policies:write` |
 | `POST /v1/oid4vp/requests`, `GET /v1/oid4vp/requests/{id}` | `verifications:create` |
-| `POST /oid4vp/response` | wallet (OID4VP `direct_post`) |
+| `GET /oid4vp/request/{ref}` | wallet (solicitud firmada, `oauth-authz-req+jwt`) |
+| `POST /oid4vp/response` | wallet (OID4VP `direct_post` / `direct_post.jwt`) |
 
 Flujo de verificación: `POST /v1/presentation-requests` devuelve `nonce` y `aud` (10 min, un uso); el
 titular presenta `SD-JWT~disclosures~KB-JWT` con ese `aud`/`nonce`; `POST /v1/verifications` ejecuta
@@ -126,9 +128,11 @@ las 11 comprobaciones del núcleo (claves y estado de emisores alojados desde la
 HTTPS con límites y caché) y devuelve `valid` / `invalid` / `indeterminate` con el detalle y los
 claims divulgados. Se registra el resultado, nunca los claims.
 
-Con un wallet estándar (OID4VP 1.0, [ADR-0014](docs/adr/0014-oid4vp.md)): `POST /v1/oid4vp/requests`
-devuelve un enlace `openid4vp://` y su QR; el wallet responde por `direct_post` y el verificador consulta
-`GET /v1/oid4vp/requests/{id}` (el panel lo hace solo). El resultado con claims se guarda cifrado 10 minutos.
+Con un wallet estándar (OID4VP 1.0, [ADR-0014](docs/adr/0014-oid4vp.md), [ADR-0015](docs/adr/0015-oid4vp-signed-encrypted.md)):
+`POST /v1/oid4vp/requests` devuelve un enlace `openid4vp://` y su QR. Por defecto la solicitud va
+**firmada** (`x509_hash`, por referencia) y la respuesta **cifrada** (`direct_post.jwt`); el verificador
+consulta `GET /v1/oid4vp/requests/{id}` (el panel lo hace solo). El resultado con claims se guarda cifrado
+10 minutos.
 
 Flujo de emisión: `POST /v1/credentials` devuelve `offer_uri` (para QR/enlace), `qr_svg` y `tx_code`
 (**una sola vez**; se envía al titular por otro canal). El wallet resuelve la oferta, canjea el código
@@ -161,6 +165,7 @@ el volumen. Puertos de host: `ALETHEIA_API_PORT` (8008) y `ALETHEIA_DB_PORT` (54
 | `ALETHEIA_OID4VCI_TOKEN_RATE_LIMIT` | 60 | Canjes por red cada 15 min en `/oid4vci/token` |
 | `ALETHEIA_TX_CODE_KEY` | — (dev: generada) | Clave HMAC de los `tx_code`, obligatoria desplegado (ADR-0013) |
 | `ALETHEIA_DATABASE_PASSWORD` | — | Reemplaza la contraseña del DSN (inyectada desde Secrets Manager) |
+| `ALETHEIA_VERIFIER_KEY_PEM`, `ALETHEIA_VERIFIER_CERT_CHAIN_PEM` | — (dev: autofirmado) | Identidad X.509 que firma las solicitudes OID4VP (ADR-0015) |
 
 Dependencias: `pyproject.toml` + `uv.lock` (versiones exactas y hashes). `make lock` lo regenera con la
 misma versión de `uv` que usa la imagen.

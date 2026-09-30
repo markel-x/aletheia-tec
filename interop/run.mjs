@@ -14,6 +14,8 @@
 import { webcrypto } from "node:crypto";
 import { digest, ES256, generateSalt } from "@sd-jwt/crypto-nodejs";
 import { SDJwtVcInstance } from "@sd-jwt/sd-jwt-vc";
+import { CompactEncrypt, importJWK, importX509, jwtVerify, decodeProtectedHeader } from "jose";
+import { createHash } from "node:crypto";
 
 const API = process.env.ALETHEIA_API ?? "http://api:8000";
 const PUBLIC = (process.env.ALETHEIA_PUBLIC_BASE ?? "http://127.0.0.1:8008").replace(/\/$/, "");
@@ -189,7 +191,12 @@ async function main() {
   }
   const vpSession = await http("POST", "/v1/oid4vp/requests", {
     token,
-    json: { trust_policy_id: vpPolicy.id, claims: [["family_name"], ["course", "grade"]] },
+    json: {
+      trust_policy_id: vpPolicy.id,
+      claims: [["family_name"], ["course", "grade"]],
+      client_id_scheme: "redirect_uri",
+      encrypt_response: false,
+    },
   });
   // El wallet sólo ve el enlace openid4vp:// (QR): de ahí saca todo lo que necesita.
   const vpUrl = new URL(vpSession.request_uri);
@@ -223,6 +230,49 @@ async function main() {
       vpStatus.result.disclosed_claims?.family_name === "Lovelace" && vpStatus.result.disclosed_claims?.course?.grade === "A" &&
       !("given_name" in (vpStatus.result.disclosed_claims ?? {})),
     `${vpStatus.status} / ${vpStatus.result?.result}${vpStatus.result?.reason ? " / " + vpStatus.result.reason : ""}`,
+  );
+
+  // --- OID4VP firmado (x509_hash) con respuesta cifrada (direct_post.jwt) ----------
+  // Verificación de la solicitud y cifrado de la respuesta con `jose` (implementación JOSE independiente).
+  const signed = await http("POST", "/v1/oid4vp/requests", {
+    token,
+    json: { trust_policy_id: vpPolicy.id, claims: [["family_name"]], client_id_scheme: "x509_hash", encrypt_response: true },
+  });
+  const signedUrl = new URL(signed.request_uri);
+  const sq = Object.fromEntries(signedUrl.searchParams);
+  const reqJwt = await (await fetch(internal(sq.request_uri))).text();
+  const reqHeader = decodeProtectedHeader(reqJwt);
+  const leafDer = Buffer.from(reqHeader.x5c[0], "base64");
+  const leafPem = `-----BEGIN CERTIFICATE-----\n${reqHeader.x5c[0].match(/.{1,64}/g).join("\n")}\n-----END CERTIFICATE-----`;
+  const { payload: reqClaims } = await jwtVerify(reqJwt, await importX509(leafPem, "ES256"), {
+    typ: "oauth-authz-req+jwt",
+    audience: "https://self-issued.me/v2",
+  });
+  const expectedHash = `x509_hash:${createHash("sha256").update(leafDer).digest("base64url")}`;
+  check(
+    "OID4VP firmado: jose verifica la solicitud con x5c y el client_id x509_hash coincide",
+    sq.client_id === expectedHash && reqClaims.client_id === expectedHash && Object.keys(sq).length === 2,
+  );
+  const encJwk = reqClaims.client_metadata.jwks.keys[0];
+  const signedPresentation = await sdjwt.present(credential, { family_name: true }, {
+    kb: { payload: { iat: Math.floor(Date.now() / 1000), aud: reqClaims.client_id, nonce: reqClaims.nonce } },
+  });
+  const jwe = await new CompactEncrypt(
+    new TextEncoder().encode(JSON.stringify({ vp_token: { credential: [signedPresentation] }, state: reqClaims.state })),
+  )
+    .setProtectedHeader({ alg: "ECDH-ES", enc: "A128GCM", kid: encJwk.kid })
+    .encrypt(await importJWK({ kty: encJwk.kty, crv: encJwk.crv, x: encJwk.x, y: encJwk.y }, "ECDH-ES"));
+  const encRes = await fetch(internal(reqClaims.response_uri), {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ response: jwe }),
+  });
+  const signedStatus = await http("GET", `/v1/oid4vp/requests/${signed.id}`, { token });
+  check(
+    "OID4VP cifrado: Aletheia descifra el JWE de jose (ECDH-ES/A128GCM) y valida",
+    encRes.status === 200 && signedStatus.result?.result === "valid" && signedStatus.result?.response_mode === "direct_post.jwt" &&
+      signedStatus.result?.disclosed_claims?.family_name === "Lovelace",
+    `HTTP ${encRes.status} / ${signedStatus.result?.result}${signedStatus.result?.reason ? " / " + signedStatus.result.reason : ""}`,
   );
 
   // --- Revocación: la biblioteca la ve en la Status List ---------------------------
