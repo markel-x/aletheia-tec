@@ -31,6 +31,8 @@ src/aletheia/cli.py     CLI: `aletheia demo`, `aletheia version`
 src/aletheia/vc/        Núcleo: SD-JWT VC, JWS, firmantes (local dev / AWS KMS), Token Status List, verificador
 tests/vc/               Pruebas del núcleo (vectores de especificaciones, seguridad, criterios de aceptación)
 requirements/           Dependencias fijadas para las imágenes (runtime, dev)
+db/init/                Esquema SQL inicial (fuente ejecutable del modelo hasta que exista Alembic)
+db/tests/               Pruebas del esquema ejecutadas por `docker compose run --rm db-test`
 Dockerfile, compose.yaml, .dockerignore, Makefile
 docs/                   Alcance, perfil, arquitectura, modelo de datos, ADRs, reportes
 ```
@@ -44,7 +46,14 @@ docker compose build                # imágenes aletheia:test y aletheia:runtime
 docker compose run --rm tests       # ruff + mypy + pytest dentro del contenedor
 docker compose run --rm demo        # emisión → verificación → revocación → verificación
 docker run --rm aletheia:runtime    # {"version": "0.1.0", "profile": "ALT-P1"}
+docker compose up -d db             # PostgreSQL 16 con el esquema de docs/03 (db/init/)
+docker compose run --rm db-test     # esquema, restricciones y privilegios del rol de la app
 ```
+
+La base queda en `127.0.0.1:5433` (variable `ALETHEIA_DB_PORT`), base `aletheia`, roles
+`aletheia_migrate` (propietario; futuro Alembic) y `aletheia_app` (DML; sólo `INSERT/SELECT` en
+`audit_event`). Contraseñas de desarrollo por defecto, sobreescribibles con `ALETHEIA_DB_PASSWORD` y
+`ALETHEIA_APP_PASSWORD`. `docker compose down -v` borra el volumen y vuelve a inicializar el esquema.
 
 `make docker-build`, `make docker-test` y `make docker-demo` son equivalentes. La imagen `runtime`
 arranca con `ALETHEIA_ENV=production`; la demostración sólo funciona con `ALETHEIA_ENV=development`

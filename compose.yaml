@@ -1,8 +1,10 @@
 # Entorno local reproducible.
 #   docker compose run --rm tests   -> lint, tipos y pruebas
 #   docker compose run --rm demo    -> flujo emisión/verificación/revocación con datos ficticios
+#   docker compose up -d db          -> PostgreSQL 16 con el esquema de docs/03 (db/init)
+#   docker compose run --rm db-test  -> comprueba esquema, restricciones y privilegios
 #
-# Los servicios "api" y "db" (PostgreSQL) se agregan en el incremento 2.
+# El servicio "api" se agrega en el incremento 2.
 name: aletheia
 
 x-hardening: &hardening
@@ -32,3 +34,54 @@ services:
     environment:
       ALETHEIA_ENV: development
     command: ["demo"]
+
+  db:
+    image: postgres:16-alpine
+    # Contraseñas sólo para desarrollo local; en AWS las gestiona Secrets Manager (doc 02 §6).
+    environment:
+      POSTGRES_DB: aletheia
+      POSTGRES_USER: aletheia_migrate
+      POSTGRES_PASSWORD: ${ALETHEIA_DB_PASSWORD:-dev-migrate-password}
+      ALETHEIA_APP_PASSWORD: ${ALETHEIA_APP_PASSWORD:-dev-app-password}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${ALETHEIA_DB_PORT:-5433}:5432"
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]   # lo mínimo que necesita el entrypoint oficial
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aletheia_migrate -d aletheia"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  db-test:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: aletheia
+      PGUSER: aletheia_migrate
+      PGPASSWORD: ${ALETHEIA_DB_PASSWORD:-dev-migrate-password}
+      ALETHEIA_APP_PASSWORD: ${ALETHEIA_APP_PASSWORD:-dev-app-password}
+    volumes:
+      - ./db/tests:/tests:ro
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=16m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    user: "70:70"   # usuario postgres de la imagen alpine
+    entrypoint: ["sh", "/tests/run.sh"]
+
+volumes:
+  db-data:
