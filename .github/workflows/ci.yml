@@ -1,0 +1,60 @@
+# CI: las mismas imágenes y comandos que en local (compose). Sin credenciales
+# de AWS: la infraestructura sólo se valida estáticamente.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: lint, tipos, pruebas (con PostgreSQL)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Construir imágenes
+        run: docker compose build
+      - name: Lint, mypy y pytest (incluye pruebas de BD contra aletheia_test)
+        run: docker compose run --rm tests
+      - name: Pruebas SQL del esquema y de privilegios
+        run: docker compose run --rm db-test
+      - name: Demostración del núcleo
+        run: docker compose run --rm demo > /dev/null
+      - name: API arranca y responde /readyz
+        run: |
+          docker compose up -d api
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8008/readyz; then echo; exit 0; fi
+            sleep 2
+          done
+          docker compose logs api migrate db
+          exit 1
+      - name: Detener
+        if: always()
+        run: docker compose down -v
+
+  infra:
+    name: terraform fmt + validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.5"
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate

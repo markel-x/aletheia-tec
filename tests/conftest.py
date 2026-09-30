@@ -1,0 +1,50 @@
+"""Fixtures compartidas.
+
+Las pruebas que necesitan PostgreSQL llevan ``@pytest.mark.db`` y usan
+``ALETHEIA_TEST_DATABASE_URL`` (rol propietario; la base se migra y se
+revierte). Sin esa variable se omiten, nunca fallan en silencio.
+"""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Iterator
+
+import pytest
+
+from aletheia.platform.config import Environment, Settings
+
+TEST_DATABASE_URL = os.environ.get("ALETHEIA_TEST_DATABASE_URL")
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    if TEST_DATABASE_URL:
+        return
+    skip = pytest.mark.skip(reason="ALETHEIA_TEST_DATABASE_URL no definida")
+    for item in items:
+        if "db" in item.keywords:
+            item.add_marker(skip)
+
+
+@pytest.fixture
+def settings_without_db() -> Settings:
+    return Settings(env=Environment.TEST, database_url=None, log_format="text")
+
+
+@pytest.fixture(scope="session")
+def migrated_database_url() -> Iterator[str]:
+    """Base de pruebas en ``head``. Se revierte al terminar la sesión."""
+    from aletheia.db.migrations import downgrade, upgrade
+
+    assert TEST_DATABASE_URL
+    downgrade(TEST_DATABASE_URL, "base")  # estado limpio aunque una sesión anterior fallara
+    upgrade(TEST_DATABASE_URL)
+    try:
+        yield TEST_DATABASE_URL
+    finally:
+        downgrade(TEST_DATABASE_URL, "base")
+
+
+@pytest.fixture
+def db_settings(migrated_database_url: str) -> Settings:
+    return Settings(env=Environment.TEST, database_url=migrated_database_url, log_format="text")  # type: ignore[arg-type]

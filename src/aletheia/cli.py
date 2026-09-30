@@ -6,14 +6,19 @@ Por ahora expone el núcleo ``aletheia.vc``:
   revocación → nueva verificación con datos ficticios y claves efímeras.
   Sólo en ``ALETHEIA_ENV=development`` (usa el firmante local de desarrollo).
 - ``aletheia version``.
+- ``aletheia api``: servidor HTTP (uvicorn) con la aplicación FastAPI.
+- ``aletheia migrate``: aplica las migraciones Alembic hasta ``head``.
+- ``aletheia maintenance``: purga de datos caducados (tarea programada, ADR-0008).
 
-Los comandos ``api``, ``migrate`` y ``maintenance`` llegan con el incremento 2.
+Los tres últimos exigen ``ALETHEIA_DATABASE_URL``; la misma imagen ejecuta
+los tres roles (ADR-0001).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import secrets
 import sys
@@ -146,16 +151,72 @@ def run_demo(environment: str) -> dict[str, Any]:
     }
 
 
+def _run_service_command(args: argparse.Namespace) -> int:
+    # Importaciones diferidas: "demo" y "version" no necesitan la pila web ni la BD.
+    from .platform.config import get_settings
+    from .platform.logging import configure_logging
+
+    settings = get_settings()
+    configure_logging(settings.log_level, settings.log_format)
+    log = logging.getLogger("aletheia.cli")
+    try:
+        database_url = settings.require_database_url()
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if args.command == "migrate":
+        from .db.migrations import head_revision, upgrade
+
+        upgrade(database_url)
+        log.info("migrations applied", extra={"head": head_revision()})
+        return 0
+    if args.command == "maintenance":
+        from .maintenance import run_maintenance
+        from .platform.db import Database
+
+        db = Database(settings)
+        try:
+            with db.session() as session:
+                run_maintenance(session)
+        finally:
+            db.dispose()
+        return 0
+
+    import uvicorn
+
+    from .api import create_app
+
+    uvicorn.run(
+        create_app(settings),
+        host=args.host,
+        port=args.port,
+        log_config=None,  # el logging lo configura la aplicación
+        proxy_headers=True,
+        forwarded_allow_ips="*",  # detrás del ALB; en local no hay proxy
+        server_header=False,
+        date_header=False,
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aletheia", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("version", help="muestra la versión y el perfil")
     sub.add_parser("demo", help="flujo completo del núcleo con datos ficticios (sólo desarrollo)")
+    api = sub.add_parser("api", help="servidor HTTP")
+    api.add_argument("--host", default="0.0.0.0")  # noqa: S104 - dentro del contenedor
+    api.add_argument("--port", type=int, default=8000)
+    sub.add_parser("migrate", help="aplica las migraciones de base de datos")
+    sub.add_parser("maintenance", help="purga datos caducados (tarea programada)")
     args = parser.parse_args(argv)
 
     if args.command == "version":
         print(json.dumps({"version": __version__, "profile": PROFILE_ID}))
         return 0
+    if args.command in {"api", "migrate", "maintenance"}:
+        return _run_service_command(args)
 
     environment = os.environ.get("ALETHEIA_ENV", "production")
     try:

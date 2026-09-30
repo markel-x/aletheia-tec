@@ -1,19 +1,20 @@
 # Aletheia — imagen multi-etapa.
 #
-#   target "test"    : núcleo + herramientas; ejecuta ruff, mypy y pytest.
+#   target "test"    : aplicación + herramientas; ejecuta ruff, mypy y pytest.
 #   target "runtime" : sólo dependencias de ejecución, usuario sin privilegios.
 #
-# Imagen base: Python 3.13 sobre Debian 13 (trixie), variante slim.
+# Dependencias instaladas con uv desde uv.lock (--frozen: el lock manda; --require-hashes
+# lo garantiza uv al exportar). Imagen base: Python 3.13 sobre Debian 13 (trixie), slim.
 # En CI/producción fijar además el digest: --build-arg PYTHON_IMAGE=python:3.13.15-slim-trixie@sha256:<digest>
 ARG PYTHON_IMAGE=python:3.13.15-slim-trixie
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.21
 
 # ---------------------------------------------------------------------------
+FROM ${UV_IMAGE} AS uv
+
 FROM ${PYTHON_IMAGE} AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH \
     PYTHONPATH=/app/src
@@ -24,19 +25,21 @@ WORKDIR /app
 
 # ---------------------------------------------------------------------------
 FROM base AS runtime-deps
-COPY requirements/runtime.txt /tmp/requirements/runtime.txt
-# --no-deps + lista completa y fijada: cualquier transitiva no declarada rompe el build.
-# --only-binary: sin compilación de código nativo dentro de la imagen.
-RUN python -m venv "$VIRTUAL_ENV" \
- && pip install --no-deps --only-binary=:all: -r /tmp/requirements/runtime.txt \
- && pip check
+COPY --from=uv /uv /usr/local/bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_NO_CACHE=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1
+COPY pyproject.toml uv.lock ./
+# --no-install-project: sólo dependencias; el código se copia aparte y se importa vía PYTHONPATH.
+# --no-binary-package no aplica: se exige wheel para todo (sin compilar dentro de la imagen).
+RUN uv sync --frozen --no-dev --no-install-project --no-editable --link-mode=copy \
+      --python /usr/local/bin/python3
 
 # ---------------------------------------------------------------------------
 FROM runtime-deps AS test
-COPY requirements/dev.txt /tmp/requirements/dev.txt
-RUN pip install --no-deps --only-binary=:all: -r /tmp/requirements/dev.txt \
- && pip check
-COPY pyproject.toml ./
+RUN uv sync --frozen --no-install-project --no-editable --link-mode=copy \
+      --python /usr/local/bin/python3
 COPY src ./src
 COPY tests ./tests
 # El código queda de root y de sólo lectura para el usuario de ejecución;
@@ -58,5 +61,8 @@ COPY src ./src
 # Seguro por defecto: fuera de "development" el firmante local se niega a operar.
 ENV ALETHEIA_ENV=production
 USER 10001:10001
+EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+  CMD ["python", "-c", "import sys,urllib.request as u; sys.exit(0 if u.urlopen('http://127.0.0.1:8000/readyz', timeout=2).status == 200 else 1)"]
 ENTRYPOINT ["python", "-m", "aletheia"]
 CMD ["version"]

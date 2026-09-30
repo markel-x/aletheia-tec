@@ -56,6 +56,11 @@ Atributos de la plantilla por defecto (configurables por plantilla):
 
 ## 5. Restricción bloqueante del entorno
 
+> **Actualización (incremento 2, 2026-09-30):** la restricción quedó levantada. Con acceso a PyPI,
+> Docker Hub y GHCR se generó `uv.lock`, se construyeron las imágenes oficiales y se ejecutó la
+> pila completa. Se conserva el texto original como registro. Sigue pendiente la prueba de
+> interoperabilidad con `@sd-jwt/sd-jwt-vc` (npm) y `terraform init` con proveedores sí funciona.
+
 El stack obligatorio (FastAPI, SQLAlchemy, Alembic, psycopg, boto3) no está instalado y los registros de paquetes están bloqueados. Consecuencias:
 
 - **Incremento 1** se completó íntegramente: el núcleo criptográfico sólo depende de `cryptography` y `PyJWT`, que sí están disponibles.

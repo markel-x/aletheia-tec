@@ -1,6 +1,6 @@
 # 03 · Modelo de datos
 
-Estado: diseño (las migraciones Alembic se escriben en el incremento 2).
+Estado: implementado. DDL en `src/aletheia/db/migrations/sql/0001_initial_schema.sql` (migración Alembic `0001`); ORM en `src/aletheia/db/models.py`. La prueba `test_models_match_migrated_schema` garantiza que ORM y DDL coinciden; `db/tests/schema.sql` prueba las restricciones.
 
 Convenciones:
 - Clave primaria `id UUID` (v7 generado en la aplicación, ordenable). Identificadores públicos con prefijo (`org_`, `cred_`, `tpl_`, `sl_`, `ak_`…) + 22 caracteres base62 aleatorios; nunca IDs secuenciales ni correos.

@@ -1,7 +1,7 @@
 # Sólo entra al contexto lo que las imágenes necesitan.
 *
 !pyproject.toml
-!requirements/
+!uv.lock
 !src/
 !tests/
 **/__pycache__

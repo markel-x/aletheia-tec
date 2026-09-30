@@ -1,10 +1,9 @@
 # Entorno local reproducible.
-#   docker compose run --rm tests   -> lint, tipos y pruebas
-#   docker compose run --rm demo    -> flujo emisión/verificación/revocación con datos ficticios
-#   docker compose up -d db          -> PostgreSQL 16 con el esquema de docs/03 (db/init)
-#   docker compose run --rm db-test  -> comprueba esquema, restricciones y privilegios
-#
-# El servicio "api" se agrega en el incremento 2.
+#   docker compose up -d api         -> db → migrate → api en http://127.0.0.1:8008
+#   docker compose run --rm tests    -> lint, tipos y pruebas (incluidas las de BD, contra aletheia_test)
+#   docker compose run --rm demo     -> flujo emisión/verificación/revocación con datos ficticios
+#   docker compose run --rm db-test  -> comprueba esquema, restricciones y privilegios en SQL
+#   docker compose run --rm maintenance -> purga de datos caducados
 name: aletheia
 
 x-hardening: &hardening
@@ -14,8 +13,12 @@ x-hardening: &hardening
   cap_drop: [ALL]
   security_opt:
     - no-new-privileges:true
-  network_mode: none   # el núcleo no necesita red
   init: true
+
+x-app-env: &app-env
+  ALETHEIA_ENV: development
+  ALETHEIA_DATABASE_URL: postgresql+psycopg://aletheia_app:${ALETHEIA_APP_PASSWORD:-dev-app-password}@db:5432/aletheia
+  ALETHEIA_LOG_FORMAT: text
 
 services:
   tests:
@@ -24,6 +27,13 @@ services:
       context: .
       target: test
     image: aletheia:test
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ALETHEIA_ENV: test
+      # Las pruebas de BD migran/revierten: base propia, con el rol propietario.
+      ALETHEIA_TEST_DATABASE_URL: postgresql+psycopg://aletheia_migrate:${ALETHEIA_DB_PASSWORD:-dev-migrate-password}@db:5432/aletheia_test
 
   demo:
     <<: *hardening
@@ -31,9 +41,45 @@ services:
       context: .
       target: runtime
     image: aletheia:runtime
+    network_mode: none   # el núcleo no necesita red
     environment:
       ALETHEIA_ENV: development
     command: ["demo"]
+
+  migrate:
+    <<: *hardening
+    image: aletheia:runtime
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      # Las migraciones corren con el rol propietario del esquema.
+      ALETHEIA_DATABASE_URL: postgresql+psycopg://aletheia_migrate:${ALETHEIA_DB_PASSWORD:-dev-migrate-password}@db:5432/aletheia
+    command: ["migrate"]
+
+  api:
+    <<: *hardening
+    image: aletheia:runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-env
+      ALETHEIA_PUBLIC_BASE_URL: http://127.0.0.1:8008
+    ports:
+      - "127.0.0.1:${ALETHEIA_API_PORT:-8008}:8000"
+    command: ["api"]
+
+  maintenance:
+    <<: *hardening
+    image: aletheia:runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-env
+    command: ["maintenance"]
 
   db:
     image: postgres:16-alpine
@@ -63,8 +109,8 @@ services:
   db-test:
     image: postgres:16-alpine
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       PGHOST: db
       PGDATABASE: aletheia

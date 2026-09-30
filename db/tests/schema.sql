@@ -28,7 +28,7 @@ BEGIN
   SELECT array_agg(table_name::text) INTO bad
     FROM information_schema.tables t
    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-     AND table_name NOT IN ('organization','user_account','oid4vci_nonce','oid4vci_access_token','rate_limit_bucket')
+     AND table_name NOT IN ('alembic_version','organization','user_account','oid4vci_nonce','oid4vci_access_token','rate_limit_bucket')
      AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
                       WHERE c.table_schema = 'public' AND c.table_name = t.table_name
                         AND c.column_name = 'organization_id');

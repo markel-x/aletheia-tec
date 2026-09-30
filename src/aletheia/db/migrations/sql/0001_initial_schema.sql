@@ -1,14 +1,12 @@
 -- Esquema inicial de Aletheia. Transcripción de docs/03-modelo-de-datos.md.
 --
--- Se ejecuta una sola vez al inicializar el volumen de PostgreSQL. En el
--- incremento 2 este archivo se convierte en la primera migración Alembic;
--- hasta entonces es la fuente de verdad ejecutable del modelo.
+-- Lo ejecuta la migración Alembic 0001 (``aletheia migrate``). Es la fuente de
+-- verdad del esquema; ``aletheia.db.models`` debe coincidir con él y una
+-- prueba lo comprueba.
 --
 -- Convenciones (doc 03): id UUID generado en la aplicación (v7); public_id con
 -- prefijo + 22 caracteres base62; toda tabla de negocio lleva organization_id
 -- y sus índices compuestos empiezan por él; timestamptz en UTC.
-
-\set ON_ERROR_STOP on
 
 CREATE EXTENSION IF NOT EXISTS citext;
 
@@ -416,6 +414,14 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- Privilegios del rol de la aplicación
 -- ---------------------------------------------------------------------------
+-- El rol lo crea db/init/001-roles.sh (local) o Terraform/Secrets Manager (AWS).
+-- Si no existe (p. ej. en CI), se crea sin LOGIN para que los GRANT sean válidos.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aletheia_app') THEN
+    CREATE ROLE aletheia_app NOLOGIN;
+  END IF;
+END $$;
 GRANT USAGE ON SCHEMA public TO aletheia_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO aletheia_app;
 REVOKE UPDATE, DELETE ON audit_event FROM aletheia_app;
