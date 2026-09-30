@@ -60,7 +60,8 @@ function form(fields, submitLabel, onSubmit) {
         const id = `f_${x.name}`;
         if (x.type === "select")
           return `<label for="${id}">${esc(x.label)}</label><select id="${id}" name="${x.name}">${x.options
-            .map((o) => `<option value="${esc(o)}">${esc(o)}</option>`)
+            .map((o) => (typeof o === "string" ? { value: o, label: o } : o))
+            .map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`)
             .join("")}</select>`;
         if (x.type === "textarea")
           return `<label for="${id}">${esc(x.label)}</label><textarea id="${id}" name="${x.name}" ${x.required ? "required" : ""}>${esc(x.value || "")}</textarea>`;
@@ -345,10 +346,52 @@ views.verify = async () => {
     });
   }
   if (policies.length && can("verifications:create")) {
+    const w = section("Solicitar a un wallet (OID4VP)");
+    w.innerHTML += `<p class="muted">Muestra un QR que un wallet OID4VP 1.0 escanea; el titular elige compartir los claims pedidos y el resultado aparece aquí.</p>`;
+    const withVct = policies.filter((p) => p.accepted_vcts.length);
+    if (!withVct.length) {
+      w.innerHTML += `<p class="muted">Ninguna política define vct aceptados: agregue al menos uno para poder pedir la credencial por DCQL.</p>`;
+    } else {
+      w.appendChild(form([
+        { name: "trust_policy_id", label: "Política", type: "select", options: withVct.map((p) => ({ value: p.id, label: p.name })) },
+        { name: "claims", label: "Claims a pedir (rutas separadas por coma; vacío = los requeridos por la política)", placeholder: "family_name, course.grade" },
+      ], "Crear solicitud OID4VP", async (d) => {
+        const body = { trust_policy_id: d.trust_policy_id };
+        const paths = d.claims.split(",").map((x) => x.trim()).filter(Boolean).map((x) => x.split("."));
+        if (paths.length) body.claims = paths;
+        const r = await api("POST", "/v1/oid4vp/requests", body);
+        const out = document.createElement("div");
+        out.innerHTML = `<div class="row"><div class="qr"><img alt="QR OID4VP" src="${r.qr_svg}"></div>
+          <div><p><b>Estado:</b> <span data-state>${tag(r.status)}</span></p>
+          <p class="muted">Expira ${fmt(r.expires_at)} · pide: <code>${esc(JSON.stringify(r.dcql_query.credentials[0].claims ?? []))}</code></p>
+          <p><b>Enlace (mismo dispositivo):</b><br><code>${esc(r.request_uri)}</code></p><div data-result></div></div></div>`;
+        w.appendChild(out);
+        const until = new Date(r.expires_at).getTime();
+        const poll = async () => {
+          if (!document.body.contains(out)) return; // se cambió de vista
+          const st = await api("GET", `/v1/oid4vp/requests/${r.id}`).catch(() => null);
+          if (st) out.querySelector("[data-state]").innerHTML = tag(st.status) + (st.error ? ` <span class="muted">${esc(st.error)}</span>` : "");
+          if (st && st.status !== "pending") {
+            const res = st.result;
+            out.querySelector("[data-result]").innerHTML = res
+              ? `<h2>Resultado: ${tag(res.result)} ${res.reason ? `<span class="muted">(${esc(res.reason)})</span>` : ""}</h2>` +
+                table(["Comprobación", "Resultado", "Código"], res.checks.map((k) => [esc(k.name), tag(k.outcome), esc(k.code)])) +
+                (res.disclosed_claims ? `<h2>Claims divulgados</h2><pre>${esc(JSON.stringify(res.disclosed_claims, null, 2))}</pre>` : "")
+              : "";
+            return;
+          }
+          if (Date.now() < until) setTimeout(poll, 2000);
+          else out.querySelector("[data-state]").innerHTML = tag("expired");
+        };
+        setTimeout(poll, 2000);
+      }));
+    }
+    app.appendChild(w);
+
     const c = section("Verificar una presentación");
     c.innerHTML += `<p class="muted">1) Cree una solicitud y entregue <code>nonce</code> y <code>aud</code> al titular. 2) Pegue la presentación (SD-JWT~disclosures~KB-JWT).</p>`;
     let request = null;
-    const reqForm = form([{ name: "trust_policy_id", label: "Política", type: "select", options: policies.map((p) => p.id) }], "Crear solicitud de presentación", async (d, f) => {
+    const reqForm = form([{ name: "trust_policy_id", label: "Política", type: "select", options: policies.map((p) => ({ value: p.id, label: p.name })) }], "Crear solicitud de presentación", async (d, f) => {
       request = await api("POST", "/v1/presentation-requests", { trust_policy_id: d.trust_policy_id });
       f.insertAdjacentHTML("beforeend", `<div class="secret"><b>nonce:</b> <code>${esc(request.nonce)}</code><br><b>aud:</b> <code>${esc(request.aud)}</code><br><span class="muted">expira ${fmt(request.expires_at)}</span></div>`);
     });

@@ -29,6 +29,7 @@ from ..platform.logging import configure_logging
 from ..platform.middleware import RequestContextMiddleware
 from ..status import router as status_router
 from ..usage import router as usage_router
+from ..verification import oid4vp as oid4vp_verifier
 from ..verification import router as verification_router
 from . import operations
 
@@ -83,5 +84,7 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
     app.include_router(status_router.router)
     app.include_router(usage_router.router)
     app.include_router(verification_router.router)
+    app.include_router(oid4vp_verifier.router)
+    app.include_router(oid4vp_verifier.public_router)
     app.include_router(admin_router.router)
     return app

@@ -235,45 +235,42 @@ def _kb_nonce(presentation: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Verificación
 # ---------------------------------------------------------------------------
-def verify(
+def request_context(
     session: Session,
-    principal: Principal,
+    request: models.PresentationRequest,
+    presentation: str,
+    now: datetime,
+    *,
+    expected_aud: str | None = None,
+) -> PresentationContext:
+    """Contexto de una solicitud (``aud`` + nonce de un uso) para el verificador del núcleo.
+
+    Sólo se guarda el hash del nonce: se toma el que trae el KB-JWT y, si coincide con el
+    hash, se usa como valor esperado (la firma del KB-JWT lo autentica después)."""
+    presented = _kb_nonce(presentation)
+    expected = presented if presented and ids.sha256(presented) == request.nonce_hash else ""
+    request_id = request.id
+
+    def consume(nonce: str) -> bool:  # el nonce ya está fijado por la solicitud
+        return _consume_request(session, request_id, now)
+
+    return PresentationContext(expected_aud or request.aud, expected, consume)
+
+
+def run_verification(
+    session: Session,
     settings: Settings,
     backend: SignerBackend,
     *,
+    organization_id: uuid.UUID,
+    policy: models.TrustPolicy,
     presentation: str,
-    presentation_request_id: uuid.UUID | None,
-    policy_id: uuid.UUID | None,
-    now: datetime | None = None,
+    context: PresentationContext | None,
+    request: models.PresentationRequest | None,
+    api_client_id: uuid.UUID | None,
 ) -> tuple[VerificationReport, models.VerificationRecord]:
-    now = now or datetime.now(UTC)
     if len(presentation.encode()) > MAX_PRESENTATION_BYTES:
         raise AppError("presentation too large")
-
-    context: PresentationContext | None = None
-    request: models.PresentationRequest | None = None
-    if presentation_request_id is not None:
-        request = session.get(models.PresentationRequest, presentation_request_id)
-        if request is None or request.organization_id != principal.organization_id:
-            raise NotFound("Presentation request not found")
-        if request.expires_at <= now:
-            raise RequestExpired("Presentation request has expired")
-        policy = get_policy(session, principal, request.trust_policy_id)
-        # Sólo se guarda el hash del nonce: se toma el que trae el KB-JWT y, si coincide con
-        # el hash, se usa como valor esperado (la firma del KB-JWT lo autentica después).
-        presented = _kb_nonce(presentation)
-        expected = presented if presented and ids.sha256(presented) == request.nonce_hash else ""
-        request_id = request.id
-
-        def consume(nonce: str) -> bool:  # el nonce ya está fijado por la solicitud
-            return _consume_request(session, request_id, now)
-
-        context = PresentationContext(request.aud, expected, consume)
-    elif policy_id is not None:
-        policy = get_policy(session, principal, policy_id)
-    else:
-        raise AppError("presentation_request_id or policy_id is required")
-
     report = verify_presentation(
         presentation,
         policy=core_policy(session, policy, settings),
@@ -287,15 +284,18 @@ def verify(
     if report.status_reference is not None:
         prefix = f"{settings.public_base}/status-lists/"
         if report.status_reference.uri.startswith(prefix):
+            # Sólo credenciales de la propia organización: filtro explícito, no sólo RLS
+            # (las rutas públicas de OID4VP operan con acceso de sistema).
             credential_ref = session.scalar(
                 select(models.Issuance.id)
                 .join(models.StatusList, models.StatusList.id == models.Issuance.status_list_id)
                 .where(models.StatusList.public_id == report.status_reference.uri[len(prefix) :])
                 .where(models.Issuance.status_idx == report.status_reference.idx)
+                .where(models.Issuance.organization_id == organization_id)
             )
     record = models.VerificationRecord(
         id=ids.uuid7(),
-        organization_id=principal.organization_id,
+        organization_id=organization_id,
         presentation_request_id=request.id if request is not None else None,
         result=report.result.value,
         checks=[c.as_dict() for c in report.checks],  # códigos, nunca valores de claims
@@ -304,13 +304,47 @@ def verify(
         credential_ref=credential_ref,
     )
     session.add(record)
-    usage.record(
+    usage.record(session, organization_id, "verification.performed", api_client_id=api_client_id)
+    return report, record
+
+
+def verify(
+    session: Session,
+    principal: Principal,
+    settings: Settings,
+    backend: SignerBackend,
+    *,
+    presentation: str,
+    presentation_request_id: uuid.UUID | None,
+    policy_id: uuid.UUID | None,
+    now: datetime | None = None,
+) -> tuple[VerificationReport, models.VerificationRecord]:
+    now = now or datetime.now(UTC)
+    context: PresentationContext | None = None
+    request: models.PresentationRequest | None = None
+    if presentation_request_id is not None:
+        request = session.get(models.PresentationRequest, presentation_request_id)
+        if request is None or request.organization_id != principal.organization_id:
+            raise NotFound("Presentation request not found")
+        if request.expires_at <= now:
+            raise RequestExpired("Presentation request has expired")
+        policy = get_policy(session, principal, request.trust_policy_id)
+        context = request_context(session, request, presentation, now)
+    elif policy_id is not None:
+        policy = get_policy(session, principal, policy_id)
+    else:
+        raise AppError("presentation_request_id or policy_id is required")
+    return run_verification(
         session,
-        principal.organization_id,
-        "verification.performed",
+        settings,
+        backend,
+        organization_id=principal.organization_id,
+        policy=policy,
+        presentation=presentation,
+        context=context,
+        request=request,
         api_client_id=principal.actor_id if principal.actor_type == "api_client" else None,
     )
-    return report, record
 
 
 def list_records(

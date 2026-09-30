@@ -395,7 +395,7 @@ class VerificationRecord(Base):
         ForeignKey("presentation_request.id", ondelete="SET NULL")
     )
     result: Mapped[str] = mapped_column(VERIFICATION_RESULT)
-    checks: Mapped[dict[str, Any]]
+    checks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)  # [{name, outcome, code, detail}]
     issuer: Mapped[str | None] = mapped_column(Text)
     vct: Mapped[str | None] = mapped_column(Text)
     credential_ref: Mapped[uuid.UUID | None] = mapped_column(
@@ -480,6 +480,33 @@ class Oid4vciAccessToken(Base):
     issuance_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("issuance.id", ondelete="CASCADE"))
     expires_at: Mapped[datetime]
     consumed_at: Mapped[datetime | None]
+
+
+class Oid4vpSession(Base):
+    __tablename__ = "oid4vp_session"
+    __table_args__ = (
+        Index("oid4vp_session_org_created_idx", "organization_id", text("created_at DESC")),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    organization_id: Mapped[uuid.UUID] = _org_fk()
+    presentation_request_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("presentation_request.id", ondelete="CASCADE"), unique=True
+    )
+    state_hash: Mapped[bytes] = mapped_column(unique=True)
+    client_id: Mapped[str] = mapped_column(Text)
+    response_uri: Mapped[str] = mapped_column(Text)
+    dcql_query: Mapped[dict[str, Any]]
+    status: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))
+    error: Mapped[str | None] = mapped_column(Text)
+    verification_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("verification_record.id", ondelete="SET NULL")
+    )
+    result_ciphertext: Mapped[bytes | None]
+    result_encrypted_key: Mapped[bytes | None]
+    result_key_ref: Mapped[str | None] = mapped_column(Text)
+    completed_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = _created_at()
 
 
 class RateLimitBucket(Base):

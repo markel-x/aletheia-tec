@@ -73,6 +73,14 @@ def run_maintenance(session: Session, now: datetime | None = None) -> dict[str, 
             models.PresentationRequest.expires_at < now - timedelta(hours=24)
         ),
     )
+    # Resultados OID4VP (con claims divulgados, cifrados): 10 minutos tras la respuesta.
+    counts["oid4vp_results"] = _affected(
+        session,
+        update(models.Oid4vpSession)
+        .where(models.Oid4vpSession.result_ciphertext.is_not(None))
+        .where(models.Oid4vpSession.completed_at < now - timedelta(minutes=10))
+        .values(result_ciphertext=None, result_encrypted_key=None, result_key_ref=None),
+    )
     counts["idempotency_records"] = _affected(
         session,
         delete(models.IdempotencyRecord).where(models.IdempotencyRecord.expires_at < now),

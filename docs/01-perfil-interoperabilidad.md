@@ -18,7 +18,7 @@ Un solo perfil para el MVP. Todo lo que no figura aquí **no** está soportado.
 | Vinculación con el titular | `cnf.jwk` (clave pública EC P-256 del titular, obtenida del proof OID4VCI). Presentación con **KB-JWT** (`typ: kb+jwt`, `aud`, `nonce`, `iat`, `sd_hash`). |
 | Estado / revocación | **Token Status List** — `draft-ietf-oauth-status-list-21` (21-jun-2026, enviado al IESG); `bits: 1` (0 = VALID, 1 = INVALID); JWT `typ: statuslist+jwt`, `ttl: 300` |
 | Emisión (entrega) | **OID4VCI 1.0 Final** (sep-2025): oferta por referencia (`credential_offer_uri`), grant pre-autorizado con `tx_code`, Nonce Endpoint, proof `jwt` |
-| Presentación | API propia Aletheia con KB-JWT. **OID4VP 1.0 pendiente.** |
+| Presentación | **OID4VP 1.0** (solicitud por valor, `client_id` `redirect_uri:`, DCQL, `direct_post`; ADR-0014) y API propia con KB-JWT |
 | Tipo (`vct`) | URL estable por plantilla: `https://{host}/issuers/{org_public_id}/types/{template_slug}` |
 
 ## 2. Detalle por aspecto
@@ -99,7 +99,7 @@ Reglas:
 | OID4VCI: flujo de código de autorización | No (sólo pre-autorizado) |
 | DPoP | No |
 | Wallet Attestation y Key Attestation | No |
-| OID4VP con DCQL, respuesta cifrada | No (API propia) |
+| OID4VP con DCQL, respuesta cifrada | Parcial: DCQL y `direct_post` sí; respuesta cifrada (`direct_post.jwt`) y solicitud firmada (x509) no |
 | ES256 | **Sí** |
 | Token Status List | **Sí** |
 
@@ -124,7 +124,7 @@ Consecuencia: wallets que exijan HAIP (p. ej. perfiles EUDI) **no** aceptarán c
 | Verificación de una credencial emitida por Aletheia con biblioteca independiente | Sí | **Comprobada** (incremento 6): `@sd-jwt/sd-jwt-vc` 0.21.1 (OpenWallet Foundation) verifica firma, digests, `cnf` y Status List; rechaza tras revocar y con firma alterada. En CI. |
 | Presentación construida por una biblioteca independiente, verificada por Aletheia | Sí (API propia) | **Comprobada**: presentación con KB-JWT de `@sd-jwt/sd-jwt-vc` → `POST /v1/verifications` = `valid`. |
 | Verificación de credenciales de emisores externos `dc+sd-jwt` | Sí, si el emisor está en la política de confianza y publica `jwt-vc-issuer` | No comprobada |
-| Presentación desde un wallet vía OID4VP | **No** | — |
+| Presentación desde un wallet vía OID4VP 1.0 | Sí (ADR-0014): solicitud por valor, `client_id` con prefijo `redirect_uri:`, DCQL, `direct_post` | Comprobada con `@sd-jwt/sd-jwt-vc` como wallet. **Sin wallet real**; wallets que exigen solicitudes firmadas (x509, HAIP) no son compatibles todavía. |
 | Descarga de archivo / QR | Se ofrece el QR de la **oferta OID4VCI**, no de la credencial | Un QR no constituye por sí mismo integración con wallets |
 
 ## 6. Fuentes

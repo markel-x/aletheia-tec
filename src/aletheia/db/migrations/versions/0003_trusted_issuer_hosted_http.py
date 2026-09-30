@@ -36,10 +36,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # NOT VALID: conserva emisores alojados http ya existentes; sólo se validan filas nuevas.
     op.execute(sa.text("ALTER TABLE trusted_issuer DROP CONSTRAINT trusted_issuer_issuer_check"))
     op.execute(
         sa.text(
             "ALTER TABLE trusted_issuer ADD CONSTRAINT trusted_issuer_issuer_check "
-            "CHECK (issuer ~ '^https://')"
+            "CHECK (issuer ~ '^https://') NOT VALID"
         )
     )

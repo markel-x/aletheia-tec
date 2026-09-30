@@ -3,10 +3,11 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 6 de 6** — interoperabilidad comprobada con `@sd-jwt/sd-jwt-vc`, Row-Level
-> Security, prueba de carga, infraestructura AWS en Terraform (validada, **no aplicada**), pipeline de
-> despliegue y runbook (ver `docs/incrementos/06.md`). Pendiente: desplegar en una cuenta AWS, KMS real,
-> prueba con un wallet real, OID4VP.
+> Estado: **incremento 7** — presentación desde wallets estándar con **OID4VP 1.0** (DCQL,
+> `direct_post`), además de lo anterior: emisión OID4VCI, verificación, RLS, interoperabilidad con
+> `@sd-jwt/sd-jwt-vc` en ambos sentidos, infraestructura AWS en Terraform (validada, **no aplicada**).
+> Ver `docs/incrementos/07.md`. Pendiente: desplegar en AWS, KMS real, prueba con un wallet real,
+> solicitudes OID4VP firmadas (x509).
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -23,13 +24,14 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0013 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0014 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
 | [`docs/incrementos/04.md`](docs/incrementos/04.md) | Reporte del incremento 4 |
 | [`docs/incrementos/05.md`](docs/incrementos/05.md) | Reporte del incremento 5 |
-| [`docs/incrementos/06.md`](docs/incrementos/06.md) | Reporte final: evidencia, criterios de aceptación, pendientes |
+| [`docs/incrementos/06.md`](docs/incrementos/06.md) | Reporte del incremento 6: evidencia, criterios de aceptación, pendientes |
+| [`docs/incrementos/07.md`](docs/incrementos/07.md) | Reporte del incremento 7: OID4VP |
 | [`docs/runbook.md`](docs/runbook.md) | Operación: despliegue, reversión, alarmas, claves, secretos, restauración |
 | [`loadtest/README.md`](loadtest/README.md) | Prueba de carga: resultados y lectura |
 
@@ -115,12 +117,18 @@ curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        #
 | `GET /status-lists/{public_id}` | público, cacheable (`ttl` 300 s) |
 | `GET /v1/trust-policies`, `GET /v1/trust-policies/{id}`, `POST /v1/presentation-requests`, `POST/GET /v1/verifications` | `verifications:create` |
 | `POST /v1/trust-policies`, `POST/DELETE /v1/trust-policies/{id}/issuers[/{tid}]` | `trust_policies:write` |
+| `POST /v1/oid4vp/requests`, `GET /v1/oid4vp/requests/{id}` | `verifications:create` |
+| `POST /oid4vp/response` | wallet (OID4VP `direct_post`) |
 
 Flujo de verificación: `POST /v1/presentation-requests` devuelve `nonce` y `aud` (10 min, un uso); el
 titular presenta `SD-JWT~disclosures~KB-JWT` con ese `aud`/`nonce`; `POST /v1/verifications` ejecuta
 las 11 comprobaciones del núcleo (claves y estado de emisores alojados desde la base; externos por
 HTTPS con límites y caché) y devuelve `valid` / `invalid` / `indeterminate` con el detalle y los
 claims divulgados. Se registra el resultado, nunca los claims.
+
+Con un wallet estándar (OID4VP 1.0, [ADR-0014](docs/adr/0014-oid4vp.md)): `POST /v1/oid4vp/requests`
+devuelve un enlace `openid4vp://` y su QR; el wallet responde por `direct_post` y el verificador consulta
+`GET /v1/oid4vp/requests/{id}` (el panel lo hace solo). El resultado con claims se guarda cifrado 10 minutos.
 
 Flujo de emisión: `POST /v1/credentials` devuelve `offer_uri` (para QR/enlace), `qr_svg` y `tx_code`
 (**una sola vez**; se envía al titular por otro canal). El wallet resuelve la oferta, canjea el código

@@ -176,6 +176,55 @@ async function main() {
     aletheia.disclosed_claims?.family_name === "Lovelace" && !("given_name" in (aletheia.disclosed_claims ?? {})),
   );
 
+  // --- OID4VP 1.0: la biblioteca como wallet frente a Aletheia verificador ---------
+  const vctValue = verified.payload.vct;
+  const vpPolicy =
+    (await http("GET", "/v1/trust-policies", { token })).find((p) => p.name === "interop-oid4vp") ??
+    (await http("POST", "/v1/trust-policies", {
+      token,
+      json: { name: "interop-oid4vp", accepted_vcts: [vctValue], required_claims: ["family_name"] },
+    }));
+  if (!vpPolicy.trusted_issuers?.some((t) => t.issuer === offerDoc.credential_issuer)) {
+    await http("POST", `/v1/trust-policies/${vpPolicy.id}/issuers`, { token, json: { issuer: offerDoc.credential_issuer } });
+  }
+  const vpSession = await http("POST", "/v1/oid4vp/requests", {
+    token,
+    json: { trust_policy_id: vpPolicy.id, claims: [["family_name"], ["course", "grade"]] },
+  });
+  // El wallet sólo ve el enlace openid4vp:// (QR): de ahí saca todo lo que necesita.
+  const vpUrl = new URL(vpSession.request_uri);
+  const q = Object.fromEntries(vpUrl.searchParams);
+  const dcql = JSON.parse(q.dcql_query);
+  const query = dcql.credentials[0];
+  const vctOk = query.format === "dc+sd-jwt" && query.meta.vct_values.includes(vctValue);
+  // Marco de presentación a partir de las rutas DCQL: {family_name: true, course: {grade: true}}.
+  const frame = {};
+  for (const { path } of query.claims ?? []) {
+    let node = frame;
+    path.forEach((part, i) => {
+      if (i === path.length - 1) node[part] = true;
+      else node = node[part] ??= {};
+    });
+  }
+  const vpPresentation = await sdjwt.present(credential, frame, {
+    kb: { payload: { iat: Math.floor(Date.now() / 1000), aud: q.client_id, nonce: q.nonce } },
+  });
+  const vpRes = await fetch(internal(q.response_uri), {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ state: q.state, vp_token: JSON.stringify({ [query.id]: [vpPresentation] }) }),
+  });
+  check("OID4VP: solicitud por valor (response_mode direct_post, DCQL dc+sd-jwt)", q.response_mode === "direct_post" && vctOk && q.client_id.startsWith("redirect_uri:"));
+  check("OID4VP: Aletheia acepta el direct_post del wallet", vpRes.status === 200, `HTTP ${vpRes.status}`);
+  const vpStatus = await http("GET", `/v1/oid4vp/requests/${vpSession.id}`, { token });
+  check(
+    "OID4VP: resultado valid con los claims pedidos por DCQL",
+    vpStatus.status === "completed" && vpStatus.result?.result === "valid" &&
+      vpStatus.result.disclosed_claims?.family_name === "Lovelace" && vpStatus.result.disclosed_claims?.course?.grade === "A" &&
+      !("given_name" in (vpStatus.result.disclosed_claims ?? {})),
+    `${vpStatus.status} / ${vpStatus.result?.result}${vpStatus.result?.reason ? " / " + vpStatus.result.reason : ""}`,
+  );
+
   // --- Revocación: la biblioteca la ve en la Status List ---------------------------
   await http("POST", `/v1/credentials/${offer.id}/revoke`, { token, json: { reason: "other" } });
   let rejected = false;
