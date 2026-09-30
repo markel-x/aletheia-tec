@@ -182,6 +182,8 @@ def _run_service_command(args: argparse.Namespace) -> int:
         finally:
             db.dispose()
         return 0
+    if args.command == "bootstrap":
+        return _bootstrap(args, settings)
 
     import uvicorn
 
@@ -200,6 +202,43 @@ def _run_service_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bootstrap(args: argparse.Namespace, settings: Any) -> int:
+    from .organizations.keys import build_backend
+    from .organizations.service import bootstrap_organization
+    from .platform.db import Database
+    from .platform.errors import AppError
+
+    password = os.environ.get(args.owner_password_env)
+    if not password:
+        print(f"error: defina la contraseña en {args.owner_password_env}", file=sys.stderr)
+        return 2
+    backend = build_backend(settings)
+    db = Database(settings)
+    try:
+        with db.session() as session:
+            org, owner, key = bootstrap_organization(
+                session,
+                backend,
+                name=args.name,
+                owner_email=args.owner_email,
+                owner_display_name=args.owner_name,
+                owner_password=password,
+            )
+            result = {
+                "organization": org.public_id,
+                "issuer": f"{settings.public_base}/issuers/{org.public_id}",
+                "owner_id": str(owner.id),
+                "signing_kid": key.kid,
+            }
+    except AppError as exc:
+        print(f"error: {exc.code}: {exc.message}", file=sys.stderr)
+        return 1
+    finally:
+        db.dispose()
+    print(json.dumps(result))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="aletheia", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -210,12 +249,23 @@ def main(argv: list[str] | None = None) -> int:
     api.add_argument("--port", type=int, default=8000)
     sub.add_parser("migrate", help="aplica las migraciones de base de datos")
     sub.add_parser("maintenance", help="purga datos caducados (tarea programada)")
+    boot = sub.add_parser(
+        "bootstrap", help="crea una organización con su propietario y clave de firma"
+    )
+    boot.add_argument("--name", required=True, help="nombre de la organización")
+    boot.add_argument("--owner-email", required=True)
+    boot.add_argument("--owner-name", required=True)
+    boot.add_argument(
+        "--owner-password-env",
+        default="ALETHEIA_BOOTSTRAP_PASSWORD",
+        help="variable de entorno con la contraseña (nunca se pasa por argumento)",
+    )
     args = parser.parse_args(argv)
 
     if args.command == "version":
         print(json.dumps({"version": __version__, "profile": PROFILE_ID}))
         return 0
-    if args.command in {"api", "migrate", "maintenance"}:
+    if args.command in {"api", "migrate", "maintenance", "bootstrap"}:
         return _run_service_command(args)
 
     environment = os.environ.get("ALETHEIA_ENV", "production")

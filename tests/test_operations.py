@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -24,11 +26,13 @@ def test_readyz_reports_missing_database(settings_without_db: Settings) -> None:
         assert r.json() == {"status": "database_not_configured"}
 
 
-def test_readyz_reports_unreachable_database() -> None:
+def test_readyz_reports_unreachable_database(tmp_path: Path) -> None:
     settings = Settings(
         env=Environment.TEST,
         database_url="postgresql+psycopg://u:p@127.0.0.1:1/nope",  # type: ignore[arg-type]
         db_pool_timeout_seconds=1,
+        signing_backend="local_dev",
+        dev_keys_dir=tmp_path,
     )
     with TestClient(create_app(settings)) as client:
         r = client.get("/readyz")

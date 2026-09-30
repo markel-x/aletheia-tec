@@ -3,10 +3,10 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 2 de 6** — estructura ejecutable: API FastAPI con `/healthz` y `/readyz`,
-> configuración por entorno, modelo de datos con migraciones Alembic, logging estructurado, tarea de
-> mantenimiento, `uv.lock`, CI y esqueleto de Terraform (ver `docs/incrementos/02.md`).
-> Todavía **no** hay endpoints de negocio (organizaciones, emisión, verificación) ni panel.
+> Estado: **incremento 3 de 6** — organizaciones, autenticación (sesiones y claves de API), matriz de
+> permisos, auditoría, claves de firma (local / AWS KMS) con rotación y compromiso, y metadatos
+> públicos del emisor (ver `docs/incrementos/03.md`). Todavía **no** hay plantillas, emisión,
+> OID4VCI, verificación ni panel.
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -26,13 +26,17 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0011 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
+| [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
 
 ## Estructura
 
 ```
-src/aletheia/cli.py          CLI: `api`, `migrate`, `maintenance`, `demo`, `version`
-src/aletheia/api/            Aplicación FastAPI (fábrica, `/healthz`, `/readyz`)
-src/aletheia/platform/       Configuración, sesión de BD, logging JSON, errores estables, request-id
+src/aletheia/cli.py          CLI: `api`, `migrate`, `maintenance`, `bootstrap`, `demo`, `version`
+src/aletheia/api/            Aplicación FastAPI (fábrica, dependencias, `/healthz`, `/readyz`)
+src/aletheia/platform/       Configuración, sesión de BD, logging JSON, errores, request-id, ids, rate limit
+src/aletheia/authz/          Matriz de permisos, login/sesiones, claves de API, `/v1/auth`, `/v1/api-clients`
+src/aletheia/organizations/  Alta, miembros, perfil de emisor, claves de firma (local/KMS), `/.well-known/jwt-vc-issuer`
+src/aletheia/audit/          Registro append-only de acciones sensibles
 src/aletheia/db/models.py    Modelo ORM (SQLAlchemy 2) — espejo de docs/03
 src/aletheia/db/migrations/  Alembic; el DDL inicial vive en `sql/0001_initial_schema.sql`
 src/aletheia/maintenance.py  Purga programada de datos caducados (ADR-0008)
@@ -61,6 +65,31 @@ docker compose run --rm maintenance # purga de datos caducados
 docker run --rm aletheia:runtime    # {"version": "0.1.0", "profile": "ALT-P1"}
 ```
 
+### Primera organización y uso de la API
+
+```bash
+docker compose run --rm -e ALETHEIA_BOOTSTRAP_PASSWORD='una contraseña larga' bootstrap \
+  --name "Universidad Demo" --owner-email owner@example.org --owner-name "Propietaria"
+curl -s -X POST http://127.0.0.1:8008/v1/auth/login -H 'content-type: application/json' \
+  -d '{"email":"owner@example.org","password":"una contraseña larga"}'      # → {"token": "st_…", …}
+curl -s http://127.0.0.1:8008/v1/organization -H "Authorization: Bearer st_…"
+curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        # JWKS público del emisor
+```
+
+| Endpoint | Permiso |
+|---|---|
+| `POST /v1/auth/login`, `POST /v1/auth/logout`, `GET /v1/auth/me` | — / sesión |
+| `GET /v1/organization`, `GET /v1/organization/issuer-profile` | cualquier miembro |
+| `PUT /v1/organization/issuer-profile`, `GET /v1/signing-keys`, `POST /v1/signing-keys/rotate` | `org:manage` |
+| `POST /v1/signing-keys/{id}/compromise` | `signing_keys:compromise` (sólo owner) |
+| `GET/POST /v1/members`, `PATCH/DELETE /v1/members/{user_id}` | `members:manage` |
+| `GET/POST /v1/api-clients`, `DELETE /v1/api-clients/{id}` | `api_clients:manage` |
+| `GET /v1/audit-events` | `audit:read` |
+| `GET /.well-known/jwt-vc-issuer/issuers/{org_public_id}` | público |
+
+Las claves de API (`ak_…`) van en `Authorization: Bearer` igual que las sesiones y sólo pueden tener un
+subconjunto de los permisos de quien las crea (nunca `members:manage` ni `signing_keys:compromise`).
+
 PostgreSQL queda en `127.0.0.1:5433` (`ALETHEIA_DB_PORT`) con la base `aletheia` y la base de pruebas
 `aletheia_test`. Roles: `aletheia_migrate` (propietario; ejecuta `aletheia migrate`) y `aletheia_app`
 (la API: DML, y sólo `INSERT/SELECT` en `audit_event`). Contraseñas de desarrollo por defecto,
@@ -76,6 +105,9 @@ el volumen. Puertos de host: `ALETHEIA_API_PORT` (8008) y `ALETHEIA_DB_PORT` (54
 | `ALETHEIA_PUBLIC_BASE_URL` | `http://localhost:8000` | Origen público (`iss`, URIs de listas de estado) |
 | `ALETHEIA_LOG_LEVEL` / `ALETHEIA_LOG_FORMAT` | `INFO` / `json` | Logging estructurado; `text` en local |
 | `ALETHEIA_DB_POOL_SIZE`, `..._POOL_TIMEOUT_SECONDS`, `..._STATEMENT_TIMEOUT_MS` | 5 / 5 / 5000 | Pool y límite por sentencia |
+| `ALETHEIA_SIGNING_BACKEND` | `aws_kms` | `local_dev` sólo en `development`/`test` (ADR-0006) |
+| `ALETHEIA_DEV_KEYS_DIR` | `/var/lib/aletheia/dev-keys` | Claves PEM del backend local (volumen `dev-keys` en compose) |
+| `ALETHEIA_AWS_REGION` | — | Región del cliente KMS |
 
 Dependencias: `pyproject.toml` + `uv.lock` (versiones exactas y hashes). `make lock` lo regenera con la
 misma versión de `uv` que usa la imagen.

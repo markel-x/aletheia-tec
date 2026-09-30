@@ -9,7 +9,7 @@ license = { text = "Propietario" }
 dependencies = [
   "cryptography>=46.0.7",
   "PyJWT>=2.12.1",
-  "pydantic>=2.13",
+  "pydantic[email]>=2.13",
   "pydantic-settings>=2.14",
   "fastapi>=0.115",
   "uvicorn[standard]>=0.46",
@@ -29,6 +29,8 @@ dev = [
   "pytest>=9.0.3",
   "ruff>=0.15.11",
   "mypy>=1.20.2",
+  "moto[kms]>=5.1",          # simulación de KMS en pruebas (no valida AWS real)
+  "boto3-stubs[kms]>=1.35",
 ]
 
 [tool.uv]

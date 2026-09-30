@@ -156,7 +156,9 @@ class KmsSigner:
     @staticmethod
     def fetch_public_key(kms_client: Any, key_id: str) -> ec.EllipticCurvePublicKey:
         resp = kms_client.get_public_key(KeyId=key_id)
-        if resp.get("KeySpec") != "ECC_NIST_P256" or resp.get("KeyUsage") != "SIGN_VERIFY":
+        # ``CustomerMasterKeySpec`` es el nombre heredado que aún devuelven algunos clientes.
+        spec = resp.get("KeySpec") or resp.get("CustomerMasterKeySpec")
+        if spec != "ECC_NIST_P256" or resp.get("KeyUsage") != "SIGN_VERIFY":
             raise SigningError("la clave KMS debe ser ECC_NIST_P256 / SIGN_VERIFY")
         key = serialization.load_der_public_key(resp["PublicKey"])
         if not isinstance(key, ec.EllipticCurvePublicKey):

@@ -20,7 +20,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app/src
 RUN groupadd --system --gid 10001 aletheia \
  && useradd --system --uid 10001 --gid aletheia --home-dir /nonexistent --no-create-home \
-      --shell /usr/sbin/nologin aletheia
+      --shell /usr/sbin/nologin aletheia \
+ && mkdir -p /var/lib/aletheia/dev-keys && chown -R 10001:10001 /var/lib/aletheia
+# /var/lib/aletheia/dev-keys: claves PEM del backend local_dev (volumen en compose; vacío en producción).
 WORKDIR /app
 
 # ---------------------------------------------------------------------------

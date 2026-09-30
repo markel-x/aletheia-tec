@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator
+from pydantic import Field, HttpUrl, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,8 +47,14 @@ class Settings(BaseSettings):
     db_pool_timeout_seconds: int = Field(default=5, ge=1, le=60)
     db_statement_timeout_ms: int = Field(default=5_000, ge=100, le=60_000)
 
-    kms_key_ref_prefix: SecretStr | None = None
-    """Reservado para el incremento 3 (ARN base de las claves KMS)."""
+    signing_backend: Literal["local_dev", "aws_kms"] = "aws_kms"
+    """``local_dev`` sólo en ``development``/``test`` (ADR-0006)."""
+
+    dev_keys_dir: Path = Path("/var/lib/aletheia/dev-keys")
+    """Directorio de claves PEM del backend ``local_dev`` (fuera del repositorio)."""
+
+    aws_region: str | None = None
+    """Región para el cliente KMS; si es ``None`` se usa la configuración de boto3."""
 
     @field_validator("database_url")
     @classmethod

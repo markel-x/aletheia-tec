@@ -19,6 +19,9 @@ x-app-env: &app-env
   ALETHEIA_ENV: development
   ALETHEIA_DATABASE_URL: postgresql+psycopg://aletheia_app:${ALETHEIA_APP_PASSWORD:-dev-app-password}@db:5432/aletheia
   ALETHEIA_LOG_FORMAT: text
+  ALETHEIA_PUBLIC_BASE_URL: http://127.0.0.1:8008
+  ALETHEIA_SIGNING_BACKEND: local_dev
+  ALETHEIA_DEV_KEYS_DIR: /var/lib/aletheia/dev-keys
 
 services:
   tests:
@@ -34,6 +37,7 @@ services:
       ALETHEIA_ENV: test
       # Las pruebas de BD migran/revierten: base propia, con el rol propietario.
       ALETHEIA_TEST_DATABASE_URL: postgresql+psycopg://aletheia_migrate:${ALETHEIA_DB_PASSWORD:-dev-migrate-password}@db:5432/aletheia_test
+      ALETHEIA_DEV_KEYS_DIR: /tmp/dev-keys
 
   demo:
     <<: *hardening
@@ -66,7 +70,8 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *app-env
-      ALETHEIA_PUBLIC_BASE_URL: http://127.0.0.1:8008
+    volumes:
+      - dev-keys:/var/lib/aletheia/dev-keys   # claves PEM de desarrollo; nunca en el repositorio
     ports:
       - "127.0.0.1:${ALETHEIA_API_PORT:-8008}:8000"
     command: ["api"]
@@ -80,6 +85,20 @@ services:
     environment:
       <<: *app-env
     command: ["maintenance"]
+
+  # docker compose run --rm -e ALETHEIA_BOOTSTRAP_PASSWORD=... bootstrap \
+  #   --name "Universidad Demo" --owner-email owner@example.org --owner-name "Propietaria"
+  bootstrap:
+    <<: *hardening
+    image: aletheia:runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-env
+    volumes:
+      - dev-keys:/var/lib/aletheia/dev-keys
+    entrypoint: ["python", "-m", "aletheia", "bootstrap"]
 
   db:
     image: postgres:16-alpine
@@ -131,3 +150,4 @@ services:
 
 volumes:
   db-data:
+  dev-keys:

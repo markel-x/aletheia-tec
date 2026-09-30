@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -46,5 +47,11 @@ def migrated_database_url() -> Iterator[str]:
 
 
 @pytest.fixture
-def db_settings(migrated_database_url: str) -> Settings:
-    return Settings(env=Environment.TEST, database_url=migrated_database_url, log_format="text")  # type: ignore[arg-type]
+def db_settings(migrated_database_url: str, tmp_path: Path) -> Settings:
+    return Settings(
+        env=Environment.TEST,
+        database_url=migrated_database_url,  # type: ignore[arg-type]
+        log_format="text",
+        signing_backend="local_dev",
+        dev_keys_dir=tmp_path / "dev-keys",
+    )
