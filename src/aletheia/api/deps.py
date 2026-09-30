@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..authz.permissions import Permission
 from ..authz.service import Principal, authenticate
 from ..organizations.keys import SignerBackend
+from ..platform.crypto import DataEncryptor
 from ..platform.db import Database
 from ..platform.errors import Forbidden, Unauthorized
 
@@ -22,9 +23,15 @@ def get_db(request: Request) -> Database:
     return db
 
 
-def get_session(db: Annotated[Database, Depends(get_db)]) -> Iterator[Session]:
-    with db.session() as session:
+def get_session(request: Request, db: Annotated[Database, Depends(get_db)]) -> Iterator[Session]:
+    """Sesión por petición. La confirma ``TransactionalRoute`` antes de responder;
+    aquí sólo se garantiza el cierre (y el rollback de lo que quedara)."""
+    session = db.session_factory()
+    request.state.db_session = session
+    try:
         yield session
+    finally:
+        session.close()
 
 
 def get_signer_backend(request: Request) -> SignerBackend:
@@ -32,6 +39,13 @@ def get_signer_backend(request: Request) -> SignerBackend:
     if backend is None:
         raise RuntimeError("el backend de firma no está configurado")
     return backend
+
+
+def get_encryptor(request: Request) -> DataEncryptor:
+    encryptor: DataEncryptor | None = request.app.state.encryptor
+    if encryptor is None:
+        raise RuntimeError("el cifrado de datos no está configurado")
+    return encryptor
 
 
 def get_principal(request: Request, session: Annotated[Session, Depends(get_session)]) -> Principal:
@@ -59,3 +73,4 @@ def require(*permissions: Permission) -> Callable[..., Principal]:
 SessionDep = Annotated[Session, Depends(get_session)]
 PrincipalDep = Annotated[Principal, Depends(get_principal)]
 BackendDep = Annotated[SignerBackend, Depends(get_signer_backend)]
+EncryptorDep = Annotated[DataEncryptor, Depends(get_encryptor)]

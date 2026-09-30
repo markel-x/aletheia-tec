@@ -11,14 +11,15 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
 from ..api.deps import BackendDep, PrincipalDep, SessionDep, require
+from ..api.routing import TransactionalRoute
 from ..audit import service as audit_service
 from ..authz.permissions import ROLES, Permission
 from ..authz.service import Principal
 from ..platform.config import Settings
 from . import service
 
-router = APIRouter(prefix="/v1", tags=["organizations"])
-public_router = APIRouter(tags=["public"])
+router = APIRouter(route_class=TransactionalRoute, prefix="/v1", tags=["organizations"])
+public_router = APIRouter(route_class=TransactionalRoute, tags=["public"])
 
 
 class OrganizationResponse(BaseModel):

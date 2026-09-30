@@ -16,6 +16,7 @@ import pytest
 from aletheia.platform.config import Environment, Settings
 
 TEST_DATABASE_URL = os.environ.get("ALETHEIA_TEST_DATABASE_URL")
+pytest_plugins = ["tests.fixtures_org"]
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:

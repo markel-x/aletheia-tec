@@ -30,6 +30,9 @@ class Database:
         )
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
 
+    def session_factory(self) -> Session:
+        return self._sessions()
+
     @contextmanager
     def session(self) -> Iterator[Session]:
         with self._sessions() as session:

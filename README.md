@@ -3,10 +3,10 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 3 de 6** — organizaciones, autenticación (sesiones y claves de API), matriz de
-> permisos, auditoría, claves de firma (local / AWS KMS) con rotación y compromiso, y metadatos
-> públicos del emisor (ver `docs/incrementos/03.md`). Todavía **no** hay plantillas, emisión,
-> OID4VCI, verificación ni panel.
+> Estado: **incremento 4 de 6** — plantillas versionadas, ofertas con `tx_code` y claims cifrados,
+> entrega OID4VCI 1.0 (pre-autorizado), emisión SD-JWT VC, Token Status List, revocación, consumo
+> (ver `docs/incrementos/04.md`). Todavía **no** hay verificación por API (`/v1/verifications`),
+> panel ni despliegue en AWS.
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -27,6 +27,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
+| [`docs/incrementos/04.md`](docs/incrementos/04.md) | Reporte del incremento 4 |
 
 ## Estructura
 
@@ -37,6 +38,9 @@ src/aletheia/platform/       Configuración, sesión de BD, logging JSON, errore
 src/aletheia/authz/          Matriz de permisos, login/sesiones, claves de API, `/v1/auth`, `/v1/api-clients`
 src/aletheia/organizations/  Alta, miembros, perfil de emisor, claves de firma (local/KMS), `/.well-known/jwt-vc-issuer`
 src/aletheia/audit/          Registro append-only de acciones sensibles
+src/aletheia/issuance/       Plantillas, esquema de claims, ofertas, OID4VCI, emisión, revocación
+src/aletheia/status/         Asignación de índices y Token Status List (`/status-lists/{id}`)
+src/aletheia/usage/          Consumo por organización (`/v1/usage`)
 src/aletheia/db/models.py    Modelo ORM (SQLAlchemy 2) — espejo de docs/03
 src/aletheia/db/migrations/  Alembic; el DDL inicial vive en `sql/0001_initial_schema.sql`
 src/aletheia/maintenance.py  Purga programada de datos caducados (ADR-0008)
@@ -85,7 +89,21 @@ curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        #
 | `GET/POST /v1/members`, `PATCH/DELETE /v1/members/{user_id}` | `members:manage` |
 | `GET/POST /v1/api-clients`, `DELETE /v1/api-clients/{id}` | `api_clients:manage` |
 | `GET /v1/audit-events` | `audit:read` |
+| `GET /v1/usage` | `usage:read` |
+| `GET /v1/templates`, `GET /v1/templates/{id}/versions` | `templates:read` |
+| `POST /v1/templates`, `POST /v1/templates/{id}/versions`, `POST …/versions/{vid}/publish` | `templates:write` |
+| `POST /v1/credentials` (oferta; `Idempotency-Key`), `POST /v1/credentials/{id}/offer:reset` | `credentials:issue` |
+| `GET /v1/credentials`, `GET /v1/credentials/{id}` | `credentials:read` |
+| `POST /v1/credentials/{id}/revoke` | `credentials:revoke` |
 | `GET /.well-known/jwt-vc-issuer/issuers/{org_public_id}` | público |
+| `GET /.well-known/openid-credential-issuer/issuers/{org}`, `GET /.well-known/oauth-authorization-server/issuers/{org}` | público |
+| `GET /oid4vci/offers/{offer_id}`, `POST /oid4vci/token`, `POST /oid4vci/nonce`, `POST /oid4vci/credential` | wallet (OID4VCI) |
+| `GET /status-lists/{public_id}` | público, cacheable (`ttl` 300 s) |
+
+Flujo de emisión: `POST /v1/credentials` devuelve `offer_uri` (para QR/enlace), `qr_svg` y `tx_code`
+(**una sola vez**; se envía al titular por otro canal). El wallet resuelve la oferta, canjea el código
+pre-autorizado con el `tx_code` en `/oid4vci/token`, pide un `c_nonce`, y presenta un proof JWT con su
+clave en `/oid4vci/credential`; recibe el SD-JWT VC y Aletheia borra los claims pendientes.
 
 Las claves de API (`ak_…`) van en `Authorization: Bearer` igual que las sesiones y sólo pueden tener un
 subconjunto de los permisos de quien las crea (nunca `members:manage` ni `signing_keys:compromise`).
@@ -108,6 +126,8 @@ el volumen. Puertos de host: `ALETHEIA_API_PORT` (8008) y `ALETHEIA_DB_PORT` (54
 | `ALETHEIA_SIGNING_BACKEND` | `aws_kms` | `local_dev` sólo en `development`/`test` (ADR-0006) |
 | `ALETHEIA_DEV_KEYS_DIR` | `/var/lib/aletheia/dev-keys` | Claves PEM del backend local (volumen `dev-keys` en compose) |
 | `ALETHEIA_AWS_REGION` | — | Región del cliente KMS |
+| `ALETHEIA_KMS_DATA_KEY_ID` | — | Clave KMS simétrica para cifrar claims pendientes (obligatoria con `aws_kms`) |
+| `ALETHEIA_OID4VCI_ACCESS_TOKEN_TTL_SECONDS`, `..._NONCE_TTL_SECONDS`, `ALETHEIA_TX_CODE_MAX_ATTEMPTS` | 300 / 300 / 5 | Parámetros del flujo OID4VCI |
 
 Dependencias: `pyproject.toml` + `uv.lock` (versiones exactas y hashes). `make lock` lo regenera con la
 misma versión de `uv` que usa la imagen.

@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     aws_region: str | None = None
     """Región para el cliente KMS; si es ``None`` se usa la configuración de boto3."""
 
+    kms_data_key_id: str | None = None
+    """Clave KMS simétrica para el cifrado envelope de claims pendientes (backend ``aws_kms``)."""
+
+    oid4vci_access_token_ttl_seconds: int = Field(default=300, ge=60, le=900)
+    oid4vci_nonce_ttl_seconds: int = Field(default=300, ge=60, le=900)
+    tx_code_max_attempts: int = Field(default=5, ge=1, le=10)
+
     @field_validator("database_url")
     @classmethod
     def _psycopg_driver(cls, value: PostgresDsn | None) -> PostgresDsn | None:

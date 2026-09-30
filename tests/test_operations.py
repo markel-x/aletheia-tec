@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from aletheia import __version__
 from aletheia.api import create_app
+from aletheia.db.migrations import head_revision
 from aletheia.platform.config import Environment, Settings
 
 
@@ -62,5 +63,7 @@ def test_readyz_detects_schema_out_of_date(db_settings: Settings) -> None:
             assert r.json() == {"status": "schema_out_of_date"}
     finally:
         with engine.begin() as conn:
-            conn.execute(text("UPDATE alembic_version SET version_num = '0001'"))
+            conn.execute(
+                text("UPDATE alembic_version SET version_num = :head"), {"head": head_revision()}
+            )
         engine.dispose()

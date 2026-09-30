@@ -14,9 +14,10 @@ from fastapi import APIRouter, Request, Response
 from .. import __version__
 from ..db.migrations import head_revision
 from ..platform.db import Database
+from .routing import TransactionalRoute
 
 log = logging.getLogger(__name__)
-router = APIRouter(tags=["operations"])
+router = APIRouter(route_class=TransactionalRoute, tags=["operations"])
 
 
 @router.get("/healthz")

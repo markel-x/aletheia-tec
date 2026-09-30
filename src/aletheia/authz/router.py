@@ -10,10 +10,11 @@ from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
 from ..api.deps import PrincipalDep, SessionDep, require
+from ..api.routing import TransactionalRoute
 from . import service
 from .permissions import API_CLIENT_PERMISSIONS, Permission
 
-router = APIRouter(prefix="/v1", tags=["auth"])
+router = APIRouter(route_class=TransactionalRoute, prefix="/v1", tags=["auth"])
 
 
 class LoginRequest(BaseModel):

@@ -20,7 +20,7 @@ pytestmark = pytest.mark.db
 
 
 def test_head_revision_is_known() -> None:
-    assert head_revision() == "0001"
+    assert head_revision() == "0002"
 
 
 def test_models_match_migrated_schema(migrated_database_url: str) -> None:
