@@ -284,7 +284,7 @@ def reset_offer(
     session: SessionDep,
     request: Request,
 ) -> OfferResponse:
-    offer = service.reset_offer(session, principal, credential_id)
+    offer = service.reset_offer(session, principal, _settings(request), credential_id)
     session.flush()
     return _offer(offer, _settings(request))
 

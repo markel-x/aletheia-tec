@@ -14,9 +14,13 @@ registro no puede reutilizarse en otra oferta ni organización.
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import os
 import stat
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -124,6 +128,56 @@ class KmsDataEncryptor:
         except Exception as exc:
             raise DecryptionError("KMS decrypt failed") from exc
         return _open(resp["Plaintext"], envelope.ciphertext, context)
+
+
+# ---------------------------------------------------------------------------
+# tx_code: HMAC-SHA256 con clave del servidor (no Argon2, ver ADR-0013)
+# ---------------------------------------------------------------------------
+TX_CODE_HASH_PREFIX = "hmac-sha256$v1$"
+_tx_key_cache: dict[str, bytes] = {}
+_tx_key_lock = threading.Lock()
+
+
+def tx_code_key(settings: Settings) -> bytes:
+    """Clave HMAC de los ``tx_code``: de la configuración (desplegado) o de un archivo
+    en ``dev_keys_dir`` (desarrollo/pruebas). Nunca se guarda en la base de datos."""
+    if settings.tx_code_key is not None:
+        key = base64.urlsafe_b64decode(settings.tx_code_key.get_secret_value() + "==")
+        if len(key) < 32:
+            raise SigningError("ALETHEIA_TX_CODE_KEY debe tener al menos 32 bytes")
+        return key
+    if settings.env.is_deployed:
+        raise SigningError("ALETHEIA_TX_CODE_KEY es obligatoria en entornos desplegados")
+    path = settings.dev_keys_dir / "tx-code.key"
+    cache_key = str(path)
+    with _tx_key_lock:
+        if cache_key in _tx_key_cache:
+            return _tx_key_cache[cache_key]
+        if not path.exists():
+            settings.dev_keys_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                fd = os.open(
+                    path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, stat.S_IRUSR | stat.S_IWUSR
+                )
+            except FileExistsError:
+                pass
+            else:
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(os.urandom(32))
+        key = path.read_bytes()
+        _tx_key_cache[cache_key] = key
+        return key
+
+
+def hash_tx_code(key: bytes, issuance_id: str, tx_code: str) -> str:
+    mac = hmac.new(key, f"{issuance_id}:{tx_code}".encode(), hashlib.sha256).hexdigest()
+    return TX_CODE_HASH_PREFIX + mac
+
+
+def verify_tx_code(key: bytes, issuance_id: str, tx_code: str, stored: str) -> bool:
+    if not stored.startswith(TX_CODE_HASH_PREFIX):
+        return False
+    return hmac.compare_digest(hash_tx_code(key, issuance_id, tx_code), stored)
 
 
 def build_encryptor(settings: Settings, kms_client: Any | None = None) -> DataEncryptor:

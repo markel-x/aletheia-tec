@@ -225,7 +225,7 @@ def test_cross_organization_isolation(
     db = Database(app_settings)
     backend = LocalDevBackend(app_settings.dev_keys_dir, "test")
     try:
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             _, _, other_key = bootstrap_organization(
                 s,
                 backend,
@@ -261,7 +261,7 @@ def test_user_in_two_organizations_must_choose(
     db = Database(app_settings)
     backend = LocalDevBackend(app_settings.dev_keys_dir, "test")
     try:
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             other, _, _ = bootstrap_organization(
                 s,
                 backend,

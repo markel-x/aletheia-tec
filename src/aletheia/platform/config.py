@@ -13,7 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, HttpUrl, PostgresDsn, field_validator
+from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     database_url: PostgresDsn | None = None
     """DSN de psycopg 3 (``postgresql+psycopg://``). Obligatoria para ``api``/``migrate``."""
+
+    database_password: SecretStr | None = None
+    """Si se define, reemplaza la contraseña del DSN (ECS inyecta secretos como valores
+    sueltos desde Secrets Manager; el DSN queda sin secretos en la definición de tarea)."""
 
     public_base_url: HttpUrl = HttpUrl("http://localhost:8000")
     """Origen público (``iss`` de los emisores alojados, URIs de listas de estado)."""
@@ -62,6 +66,13 @@ class Settings(BaseSettings):
     oid4vci_access_token_ttl_seconds: int = Field(default=300, ge=60, le=900)
     oid4vci_nonce_ttl_seconds: int = Field(default=300, ge=60, le=900)
     tx_code_max_attempts: int = Field(default=5, ge=1, le=10)
+    oid4vci_token_rate_limit: int = Field(default=60, ge=1)
+    """Canjes por red (/24, /64) cada 15 min en ``/oid4vci/token``."""
+
+    tx_code_key: SecretStr | None = None
+    """Clave HMAC (≥ 32 bytes, base64url) de los ``tx_code``. Obligatoria en entornos
+    desplegados (Secrets Manager); en desarrollo se genera en ``dev_keys_dir``."""
+    """Canjes por red (/24, /64) cada 15 min en ``/oid4vci/token``."""
 
     @field_validator("database_url")
     @classmethod
@@ -77,7 +88,14 @@ class Settings(BaseSettings):
     def require_database_url(self) -> str:
         if self.database_url is None:
             raise RuntimeError("ALETHEIA_DATABASE_URL no está definida")
-        return str(self.database_url)
+        if self.database_password is None:
+            return str(self.database_url)
+        from sqlalchemy.engine import make_url
+
+        url = make_url(str(self.database_url)).set(
+            password=self.database_password.get_secret_value()
+        )
+        return url.render_as_string(hide_password=False)
 
 
 @lru_cache(maxsize=1)

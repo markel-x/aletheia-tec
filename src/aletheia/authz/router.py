@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
-from ..api.deps import PrincipalDep, SessionDep, require
+from ..api.deps import PrincipalDep, SessionDep, SystemSessionDep, require
 from ..api.routing import TransactionalRoute
 from . import service
 from .permissions import API_CLIENT_PERMISSIONS, Permission
@@ -65,7 +65,7 @@ def _client_response(client: object) -> ApiClientResponse:
 
 
 @router.post("/auth/login", response_model=LoginResponse)
-def login(body: LoginRequest, request: Request, session: SessionDep) -> LoginResponse:
+def login(body: LoginRequest, request: Request, session: SystemSessionDep) -> LoginResponse:
     token, principal, expires_at = service.login(
         session,
         email=body.email,

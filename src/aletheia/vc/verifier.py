@@ -22,7 +22,14 @@ from . import KB_JWT_TYP, SD_JWT_VC_TYP, STATUS_LIST_TYP
 from .jws import JwsFormatError, JwsSignatureError, check_header, peek, verify_compact
 from .keys import KeyFormatError, public_key_from_jwk
 from .sdjwt import SdJwtError, parse, reconstruct, sd_hash
-from .status_list import INVALID, VALID, StatusList, StatusListError, StatusReference
+from .status_list import (
+    INVALID,
+    VALID,
+    StatusList,
+    StatusListError,
+    StatusReference,
+    is_https_or_dev,
+)
 
 
 class Outcome(enum.StrEnum):
@@ -104,6 +111,9 @@ class TrustPolicy:
     max_status_age_seconds: int = 900
     clock_skew_seconds: int = 60
     max_kb_age_seconds: int = 300
+    dev_http_origin: str | None = None
+    """Sólo desarrollo/pruebas locales: acepta ``http://`` para ``iss`` y la URI de estado
+    cuando están bajo este origen exacto. ``None`` (por defecto) exige https siempre."""
 
 
 class NonceConsumer(Protocol):
@@ -250,7 +260,7 @@ def _verify(
     iss, vct = payload.get("iss"), payload.get("vct")
     if header.get("typ") != SD_JWT_VC_TYP:
         run.fail("format", "unsupported_typ", f"typ debe ser {SD_JWT_VC_TYP}")
-    if not isinstance(iss, str) or not iss.startswith("https://"):
+    if not isinstance(iss, str) or not is_https_or_dev(iss, policy.dev_http_origin):
         run.fail("format", "invalid_iss", "iss debe ser una URL https")
     if not isinstance(vct, str) or not vct:
         run.fail("format", "invalid_vct", "vct ausente")
@@ -399,7 +409,7 @@ def _check_status(
         run.record("status", Outcome.SKIPPED, "status_not_provided")
         return
     try:
-        ref = StatusReference.from_claims(payload)
+        ref = StatusReference.from_claims(payload, dev_http_origin=policy.dev_http_origin)
     except StatusListError as exc:
         run.fail("status", "status_reference_invalid", str(exc))
         return

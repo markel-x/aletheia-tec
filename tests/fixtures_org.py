@@ -28,8 +28,8 @@ def app_settings(db_settings: Settings, tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def clean_db(app_settings: Settings) -> None:
-    engine = create_engine(app_settings.require_database_url())
+def clean_db(migrated_database_url: str) -> None:
+    engine = create_engine(migrated_database_url)  # propietario: TRUNCATE no es del rol de la app
     tables = (
         "audit_event",
         "usage_event",
@@ -65,7 +65,7 @@ def org(app_settings: Settings, clean_db: None) -> dict[str, Any]:
     db = Database(app_settings)
     backend = LocalDevBackend(app_settings.dev_keys_dir, "test")
     try:
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             o, owner, key = bootstrap_organization(
                 s,
                 backend,

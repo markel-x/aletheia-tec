@@ -80,3 +80,32 @@ def test_build_encryptor_requires_kms_key_id() -> None:
         kms_data_key_id="alias/x",
     )
     assert isinstance(build_encryptor(settings), KmsDataEncryptor)
+
+
+def test_tx_code_hmac(tmp_path: Path) -> None:
+    from aletheia.platform.crypto import hash_tx_code, tx_code_key, verify_tx_code
+
+    settings = Settings(env=Environment.TEST, dev_keys_dir=tmp_path)
+    key = tx_code_key(settings)
+    assert len(key) == 32 and tx_code_key(settings) == key  # persistente y en caché
+    stored = hash_tx_code(key, "iss-1", "123456")
+    assert stored.startswith("hmac-sha256$v1$") and "123456" not in stored
+    assert verify_tx_code(key, "iss-1", "123456", stored)
+    assert not verify_tx_code(key, "iss-1", "123457", stored)
+    assert not verify_tx_code(key, "iss-2", "123456", stored)  # ligado a la emisión
+    assert not verify_tx_code(b"x" * 32, "iss-1", "123456", stored)  # sin la clave no sirve
+    assert not verify_tx_code(key, "iss-1", "123456", "$argon2id$legacy")
+
+
+def test_tx_code_key_required_when_deployed(tmp_path: Path) -> None:
+    import base64
+
+    from aletheia.platform.crypto import tx_code_key
+
+    with pytest.raises(SigningError, match="TX_CODE_KEY"):
+        tx_code_key(Settings(env=Environment.PRODUCTION, dev_keys_dir=tmp_path))
+    short = base64.urlsafe_b64encode(b"k" * 16).decode()
+    with pytest.raises(SigningError, match="32 bytes"):
+        tx_code_key(Settings(env=Environment.PRODUCTION, tx_code_key=short))  # type: ignore[arg-type]
+    good = base64.urlsafe_b64encode(b"k" * 32).decode().rstrip("=")
+    assert tx_code_key(Settings(env=Environment.PRODUCTION, tx_code_key=good)) == b"k" * 32  # type: ignore[arg-type]

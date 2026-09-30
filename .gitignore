@@ -11,3 +11,6 @@ __pycache__/
 *.tfstate
 *.tfstate.*
 *.tfplan
+
+# Interoperabilidad (Node)
+interop/node_modules/

@@ -120,8 +120,9 @@ Consecuencia: wallets que exijan HAIP (p. ej. perfiles EUDI) **no** aceptarán c
 
 | Flujo | Disponible en MVP | Interoperabilidad externa |
 |---|---|---|
-| Emisión a wallet OID4VCI (pre-autorizado, sin DPoP/atestaciones) | Sí (incremento 3) | **No comprobada**. Requiere prueba con un wallet real. |
-| Verificación de una credencial emitida por Aletheia con biblioteca independiente | Sí | Prueba automatizada con `@sd-jwt/sd-jwt-vc` planificada (requiere npm) |
+| Emisión a wallet OID4VCI (pre-autorizado, sin DPoP/atestaciones) | Sí (incremento 4) | Flujo completo ejercido por un cliente independiente en Node (Web Crypto, `interop/run.mjs`). **Sin prueba con un wallet real** (app móvil). |
+| Verificación de una credencial emitida por Aletheia con biblioteca independiente | Sí | **Comprobada** (incremento 6): `@sd-jwt/sd-jwt-vc` 0.21.1 (OpenWallet Foundation) verifica firma, digests, `cnf` y Status List; rechaza tras revocar y con firma alterada. En CI. |
+| Presentación construida por una biblioteca independiente, verificada por Aletheia | Sí (API propia) | **Comprobada**: presentación con KB-JWT de `@sd-jwt/sd-jwt-vc` → `POST /v1/verifications` = `valid`. |
 | Verificación de credenciales de emisores externos `dc+sd-jwt` | Sí, si el emisor está en la política de confianza y publica `jwt-vc-issuer` | No comprobada |
 | Presentación desde un wallet vía OID4VP | **No** | — |
 | Descarga de archivo / QR | Se ofrece el QR de la **oferta OID4VCI**, no de la credencial | Un QR no constituye por sí mismo integración con wallets |

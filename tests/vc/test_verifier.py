@@ -471,3 +471,17 @@ def test_status_list_signed_in_future_is_indeterminate(env: Env) -> None:
     report = verify(env, present(env, env.issue().serialized))
     assert report.check("status").code == "status_list_invalid"
     assert report.result is Result.INDETERMINATE
+
+
+def test_dev_http_origin_is_scoped_to_exact_origin() -> None:
+    from aletheia.vc.status_list import is_https_or_dev
+
+    assert is_https_or_dev("https://any.example/x", None)
+    assert not is_https_or_dev("http://127.0.0.1:8008/issuers/org_x", None)
+    assert is_https_or_dev("http://127.0.0.1:8008/issuers/org_x", "http://127.0.0.1:8008")
+    # Otro puerto, otro host o un prefijo engañoso no se aceptan.
+    assert not is_https_or_dev("http://127.0.0.1:8009/issuers/org_x", "http://127.0.0.1:8008")
+    assert not is_https_or_dev("http://127.0.0.1:8008.evil.example/x", "http://127.0.0.1:8008")
+    assert not is_https_or_dev("http://evil.example/x", "http://127.0.0.1:8008")
+    # Un origen https configurado no habilita http.
+    assert not is_https_or_dev("http://a.example/x", "https://a.example")

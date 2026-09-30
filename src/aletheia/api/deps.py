@@ -13,7 +13,7 @@ from ..authz.permissions import Permission
 from ..authz.service import Principal, authenticate
 from ..organizations.keys import SignerBackend
 from ..platform.crypto import DataEncryptor
-from ..platform.db import Database
+from ..platform.db import Database, rls_bypass, set_bypass, set_tenant
 from ..platform.errors import Forbidden, Unauthorized
 
 
@@ -33,6 +33,13 @@ def get_session(request: Request, db: Annotated[Database, Depends(get_db)]) -> I
         yield session
     finally:
         session.close()
+
+
+def get_system_session(session: Annotated[Session, Depends(get_session)]) -> Session:
+    """Sesión para endpoints sin principal (login, OID4VCI, listas de estado,
+    metadatos públicos): opera entre organizaciones de forma explícita."""
+    set_bypass(session, True)
+    return session
 
 
 def get_signer_backend(request: Request) -> SignerBackend:
@@ -65,7 +72,9 @@ def get_principal(
 ) -> Principal:
     if credentials is None or not credentials.credentials.strip():
         raise Unauthorized("Missing bearer token")
-    principal = authenticate(session, credentials.credentials.strip())
+    with rls_bypass(session):  # la organización se conoce después de autenticar
+        principal = authenticate(session, credentials.credentials.strip())
+    set_tenant(session, principal.organization_id)
     request.state.principal = principal
     return principal
 
@@ -83,6 +92,7 @@ def require(*permissions: Permission) -> Callable[..., Principal]:
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
+SystemSessionDep = Annotated[Session, Depends(get_system_session)]
 PrincipalDep = Annotated[Principal, Depends(get_principal)]
 BackendDep = Annotated[SignerBackend, Depends(get_signer_backend)]
 EncryptorDep = Annotated[DataEncryptor, Depends(get_encryptor)]

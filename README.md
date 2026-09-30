@@ -3,10 +3,10 @@
 Plataforma SaaS B2B/B2B2C para **emitir, administrar y verificar credenciales digitales verificables**.
 Primer caso de uso (configurable): certificados de finalización de cursos.
 
-> Estado: **incremento 5 de 6** — verificación por API (políticas de confianza, solicitudes de
-> presentación, `/v1/verifications` con emisores alojados y externos), panel administrativo en
-> `/admin`, `Authorize` en Swagger (ver `docs/incrementos/05.md`). Pendiente: despliegue en AWS
-> (Terraform), prueba con wallet real, RLS.
+> Estado: **incremento 6 de 6** — interoperabilidad comprobada con `@sd-jwt/sd-jwt-vc`, Row-Level
+> Security, prueba de carga, infraestructura AWS en Terraform (validada, **no aplicada**), pipeline de
+> despliegue y runbook (ver `docs/incrementos/06.md`). Pendiente: desplegar en una cuenta AWS, KMS real,
+> prueba con un wallet real, OID4VP.
 
 ## Perfil de credenciales (`ALT-P1`)
 
@@ -23,12 +23,15 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0011 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0013 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
 | [`docs/incrementos/04.md`](docs/incrementos/04.md) | Reporte del incremento 4 |
 | [`docs/incrementos/05.md`](docs/incrementos/05.md) | Reporte del incremento 5 |
+| [`docs/incrementos/06.md`](docs/incrementos/06.md) | Reporte final: evidencia, criterios de aceptación, pendientes |
+| [`docs/runbook.md`](docs/runbook.md) | Operación: despliegue, reversión, alarmas, claves, secretos, restauración |
+| [`loadtest/README.md`](loadtest/README.md) | Prueba de carga: resultados y lectura |
 
 ## Estructura
 
@@ -51,8 +54,10 @@ src/aletheia/vc/             Núcleo: SD-JWT VC, JWS, firmantes (local dev / AWS
 tests/                       Pruebas: núcleo (tests/vc), plataforma, API, migraciones y mantenimiento (marca `db`)
 db/init/                     Inicialización local de PostgreSQL: roles y base de pruebas
 db/tests/                    Pruebas SQL del esquema y de privilegios (`docker compose run --rm db-test`)
-infra/terraform/             Esqueleto de infraestructura AWS (proveedor, variables, módulos previstos)
-.github/workflows/ci.yml     CI: mismas imágenes y comandos que en local
+infra/terraform/             Infraestructura AWS (VPC, RDS, KMS, ECR, ECS, ALB, alarmas, OIDC); validada, no aplicada
+interop/                     Prueba de interoperabilidad con @sd-jwt/sd-jwt-vc (Node, versiones fijadas)
+loadtest/                    Prueba de carga de los endpoints con objetivo de latencia
+.github/workflows/           ci.yml (pruebas, interop, escaneos, SBOM) y deploy.yml (OIDC → ECR → migrate → ECS)
 uv.lock, Dockerfile, compose.yaml, .dockerignore, Makefile
 docs/                        Alcance, perfil, arquitectura, modelo de datos, ADRs, reportes
 ```
@@ -69,6 +74,7 @@ docker compose run --rm tests       # ruff + mypy + pytest (las pruebas de BD us
 docker compose run --rm db-test     # pruebas SQL del esquema, restricciones y privilegios
 docker compose run --rm demo        # emisión → verificación → revocación → verificación (sin BD)
 docker compose run --rm maintenance # purga de datos caducados
+docker compose run --rm -e ALETHEIA_PASSWORD=… interop   # interoperabilidad (requiere una organización)
 docker run --rm aletheia:runtime    # {"version": "0.1.0", "profile": "ALT-P1"}
 ```
 
@@ -144,6 +150,9 @@ el volumen. Puertos de host: `ALETHEIA_API_PORT` (8008) y `ALETHEIA_DB_PORT` (54
 | `ALETHEIA_AWS_REGION` | — | Región del cliente KMS |
 | `ALETHEIA_KMS_DATA_KEY_ID` | — | Clave KMS simétrica para cifrar claims pendientes (obligatoria con `aws_kms`) |
 | `ALETHEIA_OID4VCI_ACCESS_TOKEN_TTL_SECONDS`, `..._NONCE_TTL_SECONDS`, `ALETHEIA_TX_CODE_MAX_ATTEMPTS` | 300 / 300 / 5 | Parámetros del flujo OID4VCI |
+| `ALETHEIA_OID4VCI_TOKEN_RATE_LIMIT` | 60 | Canjes por red cada 15 min en `/oid4vci/token` |
+| `ALETHEIA_TX_CODE_KEY` | — (dev: generada) | Clave HMAC de los `tx_code`, obligatoria desplegado (ADR-0013) |
+| `ALETHEIA_DATABASE_PASSWORD` | — | Reemplaza la contraseña del DSN (inyectada desde Secrets Manager) |
 
 Dependencias: `pyproject.toml` + `uv.lock` (versiones exactas y hashes). `make lock` lo regenera con la
 misma versión de `uv` que usa la imagen.

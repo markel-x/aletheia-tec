@@ -22,13 +22,20 @@ from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
 
 from .. import audit
-from ..authz.service import Principal, hash_password, verify_password
+from ..authz.service import Principal, verify_password
 from ..db import models
 from ..organizations.keys import SignerBackend
 from ..organizations.service import active_signing_key, issuer_url
 from ..platform import ids
 from ..platform.config import Settings
-from ..platform.crypto import DataEncryptor, DecryptionError, Envelope
+from ..platform.crypto import (
+    DataEncryptor,
+    DecryptionError,
+    Envelope,
+    hash_tx_code,
+    tx_code_key,
+    verify_tx_code,
+)
 from ..platform.errors import AppError, Conflict, NotFound
 from ..status import service as status
 from ..usage import service as usage
@@ -176,8 +183,9 @@ def create_offer(
     offer_id = secrets.token_bytes(16)
     tx_code = _new_tx_code()
     allocation = status.allocate(session, org.id)
+    issuance_id = ids.uuid7()
     issuance = models.Issuance(
-        id=ids.uuid7(),
+        id=issuance_id,
         public_id=ids.public_id("cred"),
         organization_id=org.id,
         template_version_id=version.id,
@@ -186,7 +194,7 @@ def create_offer(
         holder_reference=holder_reference,
         offer_id=offer_id,
         pre_auth_code_hash=ids.sha256(pre_authorized_code(offer_id)),
-        tx_code_hash=hash_password(tx_code),
+        tx_code_hash=hash_tx_code(tx_code_key(settings), str(issuance_id), tx_code),
         tx_code_attempts=0,
         offer_expires_at=now + timedelta(hours=profile.offer_ttl_hours),
         status_list_id=allocation.status_list.id,
@@ -256,6 +264,7 @@ def list_issuances(
 def reset_offer(
     session: Session,
     principal: Principal,
+    settings: Settings,
     issuance_id: uuid.UUID,
     now: datetime | None = None,
 ) -> Offer:
@@ -275,7 +284,7 @@ def reset_offer(
     issuance.offer_id = secrets.token_bytes(16)
     issuance.pre_auth_code_hash = ids.sha256(pre_authorized_code(issuance.offer_id))
     tx_code = _new_tx_code()
-    issuance.tx_code_hash = hash_password(tx_code)
+    issuance.tx_code_hash = hash_tx_code(tx_code_key(settings), str(issuance.id), tx_code)
     issuance.tx_code_attempts = 0
     issuance.offer_expires_at = now + timedelta(hours=profile.offer_ttl_hours)
     audit.record(
@@ -398,7 +407,7 @@ def redeem_pre_authorized_code(
     )
     if already is not None:
         raise OidError("invalid_grant", "pre-authorized code already used")
-    if not tx_code or not verify_password(issuance.tx_code_hash, tx_code):
+    if not tx_code or not _tx_code_matches(settings, issuance, tx_code):
         issuance.tx_code_attempts += 1
         session.flush()
         session.commit()  # el intento fallido debe persistir aunque respondamos error
@@ -422,6 +431,13 @@ def redeem_pre_authorized_code(
         target_id=issuance.id,
     )
     return token, ttl
+
+
+def _tx_code_matches(settings: Settings, issuance: models.Issuance, tx_code: str) -> bool:
+    stored = issuance.tx_code_hash
+    if stored.startswith("$argon2id$"):  # ofertas creadas antes de la migración 0005
+        return verify_password(stored, tx_code)
+    return verify_tx_code(tx_code_key(settings), str(issuance.id), tx_code, stored)
 
 
 def new_nonce(session: Session, settings: Settings, now: datetime | None = None) -> str:

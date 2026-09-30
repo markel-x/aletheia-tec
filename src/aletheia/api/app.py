@@ -22,7 +22,7 @@ from ..issuance import router as issuance_router
 from ..organizations import router as organizations_router
 from ..organizations.keys import build_backend
 from ..platform.config import Settings, get_settings
-from ..platform.crypto import build_encryptor
+from ..platform.crypto import build_encryptor, tx_code_key
 from ..platform.db import Database
 from ..platform.errors import install_error_handlers
 from ..platform.logging import configure_logging
@@ -46,6 +46,8 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         has_db = settings.database_url is not None
         app.state.signer_backend = build_backend(settings, kms_client) if has_db else None
         app.state.encryptor = build_encryptor(settings, kms_client) if has_db else None
+        if has_db:
+            tx_code_key(settings)  # falla al arrancar si falta la clave en un entorno desplegado
         log.info(
             "api starting",
             extra={

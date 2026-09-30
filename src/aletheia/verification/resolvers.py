@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from ..db import models
 from ..organizations.keys import SignerBackend
 from ..platform.config import Settings
+from ..platform.db import rls_bypass
 from ..status import service as status
 from ..vc.verifier import (
     DependencyUnavailable,
@@ -116,15 +117,20 @@ class KeyResolver:
         return self._resolve_external(issuer, kid)
 
     def _resolve_hosted(self, org_public_id: str, kid: str) -> ResolvedKey:
-        key = self._session.scalar(
+        # Las claves públicas de cualquier emisor alojado son públicas (JWKS).
+        with rls_bypass(self._session):
+            key = self._lookup_hosted_key(org_public_id, kid)
+        if key is None:
+            raise KeyNotFound(kid)
+        return ResolvedKey(key.public_jwk, KeyState(key.state))
+
+    def _lookup_hosted_key(self, org_public_id: str, kid: str) -> models.SigningKey | None:
+        return self._session.scalar(
             select(models.SigningKey)
             .join(models.Organization, models.Organization.id == models.SigningKey.organization_id)
             .where(models.Organization.public_id == org_public_id)
             .where(models.SigningKey.kid == kid)
         )
-        if key is None:
-            raise KeyNotFound(kid)
-        return ResolvedKey(key.public_jwk, KeyState(key.state))
 
     def _resolve_external(self, issuer: str, kid: str) -> ResolvedKey:
         now = int(time.time())
@@ -163,9 +169,10 @@ class StatusFetcher:
         now = int(time.time())
         prefix = f"{self._settings.public_base}/status-lists/"
         if uri.startswith(prefix) and "/" not in uri[len(prefix) :]:
-            signed = status.signed_token(
-                self._session, self._backend, self._settings, uri[len(prefix) :], now
-            )
+            with rls_bypass(self._session):  # la lista de estado es pública
+                signed = status.signed_token(
+                    self._session, self._backend, self._settings, uri[len(prefix) :], now
+                )
             return FetchedStatusList(token=signed.token, fetched_at=now)
         cached = _status_cache.get(uri, now)
         if cached is not None:

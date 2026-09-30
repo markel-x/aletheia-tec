@@ -10,7 +10,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
-from ..api.deps import BackendDep, PrincipalDep, SessionDep, require
+from ..api.deps import BackendDep, PrincipalDep, SessionDep, SystemSessionDep, require
 from ..api.routing import TransactionalRoute
 from ..audit import service as audit_service
 from ..authz.permissions import ROLES, Permission
@@ -267,7 +267,7 @@ def list_audit_events(
 # ---------------------------------------------------------------------------
 @public_router.get("/.well-known/jwt-vc-issuer/issuers/{org_public_id}")
 def issuer_metadata(
-    org_public_id: str, request: Request, response: Response, session: SessionDep
+    org_public_id: str, request: Request, response: Response, session: SystemSessionDep
 ) -> dict[str, Any]:
     jwks = service.published_jwks(session, org_public_id)
     response.headers["Cache-Control"] = "public, max-age=300"

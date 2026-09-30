@@ -14,25 +14,57 @@ variable "environment" {
   }
 }
 
-variable "image_tag" {
-  description = "Etiqueta (o digest) de la imagen aletheia:runtime en ECR."
+variable "domain_name" {
+  description = "Nombre DNS público de la API (p. ej. staging.aletheia.example). Define ALETHEIA_PUBLIC_BASE_URL."
   type        = string
 }
 
-variable "public_base_url" {
-  description = "Origen público de la API (ALETHEIA_PUBLIC_BASE_URL)."
+variable "route53_zone_id" {
+  description = "Zona Route 53 para el alias y la validación ACM. Vacío: los registros se crean a mano (ver outputs)."
   type        = string
+  default     = ""
+}
 
-  validation {
-    condition     = startswith(var.public_base_url, "https://")
-    error_message = "public_base_url debe usar https://."
-  }
+variable "image_tag" {
+  description = "Etiqueta inicial de la imagen aletheia:runtime en ECR. Los despliegues posteriores los hace el pipeline."
+  type        = string
+  default     = "bootstrap"
+}
+
+variable "vpc_cidr" {
+  description = "CIDR de la VPC."
+  type        = string
+  default     = "10.40.0.0/16"
 }
 
 variable "api_desired_count" {
-  description = "Tareas ECS del servicio api (2 en producción: una por AZ)."
+  description = "Tareas mínimas del servicio api (2 en producción: una por AZ)."
   type        = number
   default     = 2
+}
+
+variable "api_max_count" {
+  description = "Tareas máximas del servicio api (autoescalado por CPU)."
+  type        = number
+  default     = 6
+}
+
+variable "api_cpu" {
+  description = "CPU de la tarea api (unidades Fargate)."
+  type        = number
+  default     = 512
+}
+
+variable "api_memory" {
+  description = "Memoria de la tarea api (MiB)."
+  type        = number
+  default     = 1024
+}
+
+variable "db_instance_class" {
+  description = "Clase de instancia RDS."
+  type        = string
+  default     = "db.t4g.small"
 }
 
 variable "db_multi_az" {
@@ -42,7 +74,7 @@ variable "db_multi_az" {
 }
 
 variable "db_backup_retention_days" {
-  description = "Retención de backups automáticos de RDS (PITR)."
+  description = "Retención de backups automáticos de RDS (PITR, RPO 5 min)."
   type        = number
   default     = 7
 }
@@ -51,4 +83,22 @@ variable "log_retention_days" {
   description = "Retención de CloudWatch Logs."
   type        = number
   default     = 90
+}
+
+variable "alarm_email" {
+  description = "Correo suscrito a las alarmas (vacío: sin suscripción)."
+  type        = string
+  default     = ""
+}
+
+variable "github_repository" {
+  description = "Repositorio autorizado a desplegar por OIDC (owner/repo)."
+  type        = string
+  default     = "markel-x/aletheia-tec"
+}
+
+variable "create_github_oidc_provider" {
+  description = "Crear el proveedor OIDC de GitHub (sólo uno por cuenta)."
+  type        = bool
+  default     = true
 }

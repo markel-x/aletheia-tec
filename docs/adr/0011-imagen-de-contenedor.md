@@ -14,6 +14,14 @@
 - `.dockerignore` en modo lista blanca: el contexto sólo incluye `pyproject.toml`, `uv.lock`, `src/` y `tests/` (nunca `.env`, `.dev-keys/`, `.git`).
 - Una sola imagen, tres roles por comando (ADR-0001): `api`, `migrate` (rol propietario de la BD) y `maintenance`. Los servicios de compose encadenan `db` (healthcheck) → `migrate` (`service_completed_successfully`) → `api`.
 
+## Actualización (incremento 6)
+- La etapa `base` aplica `apt-get upgrade` (parches de seguridad de Debian publicados después de la
+  imagen base; p. ej. OpenSSL).
+- La etapa `runtime` **elimina `pip`**: no se usa en ejecución y trae dependencias vendorizadas con CVEs
+  (`urllib3`, `msgpack`, `setuptools`).
+- Resultado: Trivy sin vulnerabilidades HIGH/CRITICAL corregibles en `aletheia:runtime`; CI lo exige y
+  genera un SBOM CycloneDX. El pipeline de despliegue exige además el escaneo de ECR sin CRITICAL.
+
 ## Pendiente
 - Escaneo de la imagen en ECR y SBOM (con la infraestructura).
 - Fijar el digest de `python:3.13.15-slim-trixie` y de la imagen de `uv` en CI.

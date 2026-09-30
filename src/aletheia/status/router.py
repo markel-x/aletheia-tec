@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
-from ..api.deps import BackendDep, SessionDep
+from ..api.deps import BackendDep, SystemSessionDep
 from ..api.routing import TransactionalRoute
 from ..platform.config import Settings
 from ..usage import service as usage
@@ -17,7 +17,7 @@ STATUS_LIST_MEDIA_TYPE = "application/statuslist+jwt"
 
 @router.get("/status-lists/{public_id}", response_class=Response)
 def status_list_token(
-    public_id: str, request: Request, session: SessionDep, backend: BackendDep
+    public_id: str, request: Request, session: SystemSessionDep, backend: BackendDep
 ) -> Response:
     settings: Settings = request.app.state.settings
     signed = service.signed_token(session, backend, settings, public_id)

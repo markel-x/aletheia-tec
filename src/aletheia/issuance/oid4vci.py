@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..api.deps import BackendDep, EncryptorDep, SessionDep
+from ..api.deps import BackendDep, EncryptorDep, SystemSessionDep
 from ..api.routing import TransactionalRoute
 from ..authz.service import network_prefix
 from ..db import models
@@ -32,7 +32,6 @@ router = APIRouter(route_class=TransactionalRoute, tags=["oid4vci"])
 
 PRE_AUTHORIZED_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code"
 PROOF_MAX_AGE = 300
-TOKEN_RATE_LIMIT = 60
 TOKEN_RATE_WINDOW = timedelta(minutes=15)
 NO_STORE = {"Cache-Control": "no-store"}
 
@@ -55,7 +54,7 @@ def _oid_error(exc: OidError) -> JSONResponse:
 # ---------------------------------------------------------------------------
 @router.get("/.well-known/openid-credential-issuer/issuers/{org_public_id}")
 def credential_issuer_metadata(
-    org_public_id: str, request: Request, session: SessionDep
+    org_public_id: str, request: Request, session: SystemSessionDep
 ) -> dict[str, Any]:
     settings = _settings(request)
     published_jwks(session, org_public_id)  # 404 si el emisor no existe o está deshabilitado
@@ -88,7 +87,7 @@ def credential_issuer_metadata(
 
 @router.get("/.well-known/oauth-authorization-server/issuers/{org_public_id}")
 def authorization_server_metadata(
-    org_public_id: str, request: Request, session: SessionDep
+    org_public_id: str, request: Request, session: SystemSessionDep
 ) -> dict[str, Any]:
     settings = _settings(request)
     published_jwks(session, org_public_id)
@@ -105,7 +104,7 @@ def authorization_server_metadata(
 # Oferta, token, nonce, credencial
 # ---------------------------------------------------------------------------
 @router.get("/oid4vci/offers/{offer_id}")
-def credential_offer(offer_id: str, request: Request, session: SessionDep) -> JSONResponse:
+def credential_offer(offer_id: str, request: Request, session: SystemSessionDep) -> JSONResponse:
     raw = service.offer_id_from_url(offer_id)
     if raw is None:
         raise NotFound("Offer not found")
@@ -115,7 +114,7 @@ def credential_offer(offer_id: str, request: Request, session: SessionDep) -> JS
 @router.post("/oid4vci/token")
 def token(
     request: Request,
-    session: SessionDep,
+    session: SystemSessionDep,
     grant_type: Annotated[str, Form()],
     pre_authorized_code: Annotated[str | None, Form(alias="pre-authorized_code")] = None,
     tx_code: Annotated[str | None, Form()] = None,
@@ -128,7 +127,7 @@ def token(
                 ratelimit.hit(
                     session,
                     f"oid4vci:token:{prefix}",
-                    limit=TOKEN_RATE_LIMIT,
+                    limit=_settings(request).oid4vci_token_rate_limit,
                     window=TOKEN_RATE_WINDOW,
                 )
             except ratelimit.RateLimited as exc:
@@ -150,7 +149,7 @@ def token(
 
 
 @router.post("/oid4vci/nonce")
-def nonce(request: Request, session: SessionDep) -> JSONResponse:
+def nonce(request: Request, session: SystemSessionDep) -> JSONResponse:
     return JSONResponse(
         {"c_nonce": service.new_nonce(session, _settings(request))}, headers=NO_STORE
     )
@@ -168,7 +167,7 @@ class CredentialRequest(BaseModel):
 def credential(
     body: CredentialRequest,
     request: Request,
-    session: SessionDep,
+    session: SystemSessionDep,
     backend: BackendDep,
     encryptor: EncryptorDep,
     authorization: Annotated[str | None, Header()] = None,

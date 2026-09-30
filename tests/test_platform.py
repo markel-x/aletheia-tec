@@ -133,3 +133,16 @@ def test_docs_disabled_in_deployed_environments() -> None:
     local = Settings(env=Environment.DEVELOPMENT, database_url=None)
     with TestClient(create_app(local)) as client:
         assert client.get("/openapi.json").status_code == 200
+
+
+def test_database_password_overrides_dsn() -> None:
+    settings = Settings(
+        database_url="postgresql+psycopg://app@db.example:5432/aletheia",  # type: ignore[arg-type]
+        database_password="s3cr3t/with:chars@",  # type: ignore[arg-type]
+    )
+    url = settings.require_database_url()
+    assert url.startswith("postgresql+psycopg://app:") and url.endswith("@db.example:5432/aletheia")
+    from sqlalchemy.engine import make_url
+
+    assert make_url(url).password == "s3cr3t/with:chars@"
+    assert "s3cr3t" not in repr(settings)

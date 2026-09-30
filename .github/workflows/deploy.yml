@@ -1,0 +1,106 @@
+# Despliegue a AWS (staging automático desde main; production manual con aprobación).
+#
+# Requisitos por entorno de GitHub (Settings → Environments → staging / production):
+#   variables: AWS_DEPLOY_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_CLUSTER, ECS_SERVICE,
+#              API_TASK_FAMILY, MIGRATE_TASK_FAMILY, MAINT_TASK_FAMILY, PRIVATE_SUBNETS,
+#              APP_SECURITY_GROUP, PUBLIC_BASE_URL   (salida "deploy_config" de Terraform)
+#   production: revisores obligatorios.
+# Y una variable de REPOSITORIO DEPLOY_ENABLED=true: las variables de entorno no están disponibles
+# en el `if` del trabajo (se resuelven al empezar), así que no sirven para decidir si se ejecuta.
+# Sin credenciales permanentes: OIDC → rol con permisos sólo de despliegue (infra/terraform/ci.tf).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Entorno
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment || 'staging' }}
+    # Sin DEPLOY_ENABLED el trabajo se omite (CI igualmente corre) en lugar de fallar.
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y publicar la imagen (etiqueta inmutable = commit)
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          docker buildx build --platform linux/arm64 --target runtime --provenance=true --sbom=true \
+            -t "$IMAGE" --push .
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Esperar el escaneo de ECR y bloquear si hay CRITICAL
+        run: |
+          aws ecr wait image-scan-complete --repository-name "${{ vars.ECR_REPOSITORY }}" --image-id imageTag="$IMAGE_TAG"
+          critical=$(aws ecr describe-image-scan-findings --repository-name "${{ vars.ECR_REPOSITORY }}" \
+            --image-id imageTag="$IMAGE_TAG" --query 'imageScanFindings.findingSeverityCounts.CRITICAL' --output text)
+          echo "CRITICAL: $critical"
+          [ "$critical" = "None" ] || [ "$critical" = "0" ]
+
+      - name: Registrar revisiones de tarea con la imagen nueva
+        run: |
+          for family in "${{ vars.API_TASK_FAMILY }}" "${{ vars.MIGRATE_TASK_FAMILY }}" "${{ vars.MAINT_TASK_FAMILY }}"; do
+            aws ecs describe-task-definition --task-definition "$family" --query taskDefinition \
+              | jq --arg img "$IMAGE" '.containerDefinitions[0].image = $img
+                  | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+              > td.json
+            arn=$(aws ecs register-task-definition --cli-input-json file://td.json --query taskDefinition.taskDefinitionArn --output text)
+            echo "$family → $arn"
+            key=$(echo "$family" | sed 's/.*-//' | tr '[:lower:]' '[:upper:]')
+            echo "TD_${key}=$arn" >> "$GITHUB_ENV"
+          done
+          # EventBridge Scheduler usa la familia sin revisión: toma la última automáticamente.
+
+      - name: Migraciones (tarea única; el despliegue se detiene si falla)
+        run: |
+          task=$(aws ecs run-task --cluster "${{ vars.ECS_CLUSTER }}" --launch-type FARGATE \
+            --task-definition "$TD_MIGRATE" \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ vars.PRIVATE_SUBNETS }}],securityGroups=[${{ vars.APP_SECURITY_GROUP }}],assignPublicIp=DISABLED}" \
+            --query 'tasks[0].taskArn' --output text)
+          aws ecs wait tasks-stopped --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$task"
+          code=$(aws ecs describe-tasks --cluster "${{ vars.ECS_CLUSTER }}" --tasks "$task" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          echo "migrate exit code: $code"
+          [ "$code" = "0" ]
+
+      - name: Actualizar el servicio api y esperar estabilidad (rollback automático por circuit breaker)
+        run: |
+          aws ecs update-service --cluster "${{ vars.ECS_CLUSTER }}" --service "${{ vars.ECS_SERVICE }}" \
+            --task-definition "$TD_API" > /dev/null
+          aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
+
+      - name: Prueba de humo
+        run: |
+          curl -fsS "${{ vars.PUBLIC_BASE_URL }}/healthz"
+          curl -fsS "${{ vars.PUBLIC_BASE_URL }}/readyz"

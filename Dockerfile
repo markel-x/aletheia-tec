@@ -18,6 +18,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH \
     PYTHONPATH=/app/src
+# Parches de seguridad de Debian publicados después de la imagen base (p. ej. OpenSSL).
+RUN apt-get update \
+ && apt-get -y upgrade --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 aletheia \
  && useradd --system --uid 10001 --gid aletheia --home-dir /nonexistent --no-create-home \
       --shell /usr/sbin/nologin aletheia \
@@ -59,6 +63,9 @@ LABEL org.opencontainers.image.title="aletheia" \
       org.opencontainers.image.version="0.1.0" \
       org.opencontainers.image.licenses="Propietario"
 COPY --from=runtime-deps /opt/venv /opt/venv
+# pip no se usa en ejecución y trae dependencias vendorizadas con CVEs (urllib3, msgpack...).
+RUN rm -rf /usr/local/lib/python3.13/site-packages/pip /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
+      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
 COPY src ./src
 # Seguro por defecto: fuera de "development" el firmante local se niega a operar.
 ENV ALETHEIA_ENV=production

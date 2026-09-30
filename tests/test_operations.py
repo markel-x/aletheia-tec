@@ -50,10 +50,12 @@ def test_readyz_ok_when_migrated(db_settings: Settings) -> None:
 
 
 @pytest.mark.db
-def test_readyz_detects_schema_out_of_date(db_settings: Settings) -> None:
+def test_readyz_detects_schema_out_of_date(
+    db_settings: Settings, migrated_database_url: str
+) -> None:
     from sqlalchemy import create_engine, text
 
-    engine = create_engine(db_settings.require_database_url())
+    engine = create_engine(migrated_database_url)  # el rol de la app no puede tocar alembic_version
     with engine.begin() as conn:
         conn.execute(text("UPDATE alembic_version SET version_num = '0000'"))
     try:

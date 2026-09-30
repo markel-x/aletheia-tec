@@ -16,6 +16,7 @@ from ..db import models
 from ..organizations.keys import SignerBackend
 from ..platform import ids
 from ..platform.config import Settings
+from ..platform.db import rls_bypass
 from ..platform.errors import AppError, Conflict, NotFound
 from ..usage import service as usage
 from ..vc.jws import JwsFormatError, peek
@@ -106,9 +107,10 @@ def add_trusted_issuer(
     hosted_org_id = None
     org_public_id = hosted_org_public_id(settings, issuer)
     if org_public_id is not None:
-        hosted_org_id = session.scalar(
-            select(models.Organization.id).where(models.Organization.public_id == org_public_id)
-        )
+        with rls_bypass(session):  # el public_id de un emisor alojado es público
+            hosted_org_id = session.scalar(
+                select(models.Organization.id).where(models.Organization.public_id == org_public_id)
+            )
         if hosted_org_id is None:
             raise NotFound("Hosted issuer not found")
     trusted = models.TrustedIssuer(
@@ -152,7 +154,16 @@ def remove_trusted_issuer(
     )
 
 
-def core_policy(session: Session, policy: models.TrustPolicy) -> TrustPolicy:
+def dev_http_origin(settings: Settings) -> str | None:
+    """Origen propio con http aceptado sólo fuera de entornos desplegados."""
+    if settings.env.is_deployed or not settings.public_base.startswith("http://"):
+        return None
+    return settings.public_base
+
+
+def core_policy(
+    session: Session, policy: models.TrustPolicy, settings: Settings | None = None
+) -> TrustPolicy:
     return TrustPolicy(
         trusted_issuers=frozenset(t.issuer for t in list_trusted_issuers(session, policy)),
         accepted_vcts=frozenset(policy.accepted_vcts) if policy.accepted_vcts else None,
@@ -162,6 +173,7 @@ def core_policy(session: Session, policy: models.TrustPolicy) -> TrustPolicy:
         max_status_age_seconds=policy.max_status_age_seconds,
         clock_skew_seconds=policy.clock_skew_seconds,
         max_kb_age_seconds=policy.max_kb_age_seconds,
+        dev_http_origin=dev_http_origin(settings) if settings is not None else None,
     )
 
 
@@ -264,7 +276,7 @@ def verify(
 
     report = verify_presentation(
         presentation,
-        policy=core_policy(session, policy),
+        policy=core_policy(session, policy, settings),
         key_resolver=KeyResolver(session, settings),
         status_fetcher=StatusFetcher(session, settings, backend),
         now=int(time.time()),

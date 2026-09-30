@@ -22,6 +22,7 @@ x-app-env: &app-env
   ALETHEIA_PUBLIC_BASE_URL: http://127.0.0.1:8008
   ALETHEIA_SIGNING_BACKEND: local_dev
   ALETHEIA_DEV_KEYS_DIR: /var/lib/aletheia/dev-keys
+  ALETHEIA_OID4VCI_TOKEN_RATE_LIMIT: ${ALETHEIA_OID4VCI_TOKEN_RATE_LIMIT:-60}
 
 services:
   tests:
@@ -37,6 +38,7 @@ services:
       ALETHEIA_ENV: test
       # Las pruebas de BD migran/revierten: base propia, con el rol propietario.
       ALETHEIA_TEST_DATABASE_URL: postgresql+psycopg://aletheia_migrate:${ALETHEIA_DB_PASSWORD:-dev-migrate-password}@db:5432/aletheia_test
+      ALETHEIA_TEST_APP_DATABASE_URL: postgresql+psycopg://aletheia_app:${ALETHEIA_APP_PASSWORD:-dev-app-password}@db:5432/aletheia_test
       ALETHEIA_DEV_KEYS_DIR: /tmp/dev-keys
 
   demo:
@@ -99,6 +101,30 @@ services:
     volumes:
       - dev-keys:/var/lib/aletheia/dev-keys
     entrypoint: ["python", "-m", "aletheia", "bootstrap"]
+
+  # Interoperabilidad con @sd-jwt/sd-jwt-vc (OpenWallet Foundation) contra la API en marcha.
+  # docker compose run --rm -e ALETHEIA_PASSWORD=... interop
+  interop:
+    image: node:22-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    working_dir: /interop
+    volumes:
+      - ./interop:/interop:ro
+    tmpfs:
+      - /tmp:mode=1777,size=256m
+    environment:
+      ALETHEIA_API: http://api:8000
+      ALETHEIA_PUBLIC_BASE: http://127.0.0.1:8008
+      ALETHEIA_EMAIL: ${ALETHEIA_EMAIL:-owner@example.org}
+      npm_config_cache: /tmp/npm-cache
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    # Copia a /tmp para instalar sin escribir en el repositorio; npm ci respeta el lock exacto.
+    command: ["sh", "-c", "cp -r /interop/package.json /interop/package-lock.json /interop/run.mjs /tmp/ && cd /tmp && npm ci --no-audit --no-fund --silent && node run.mjs"]
 
   db:
     image: postgres:16-alpine

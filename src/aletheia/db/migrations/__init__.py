@@ -37,5 +37,26 @@ def upgrade(database_url: str, revision: str = "head") -> None:
     command.upgrade(alembic_config(database_url), revision)
 
 
+def set_app_role_password(database_url: str, password: str) -> None:
+    """Habilita el login del rol ``aletheia_app`` con la contraseña de Secrets Manager.
+
+    La contraseña viaja como parámetro y se cita con ``format(%L)`` dentro de la base:
+    nunca se concatena en el SQL del cliente."""
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(database_url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("SELECT set_config('aletheia.app_pw', :p, true)"), {"p": password})
+            conn.execute(
+                text(
+                    "DO $$ BEGIN EXECUTE format('ALTER ROLE aletheia_app LOGIN PASSWORD %L', "
+                    "current_setting('aletheia.app_pw')); END $$"
+                )
+            )
+    finally:
+        engine.dispose()
+
+
 def downgrade(database_url: str, revision: str) -> None:
     command.downgrade(alembic_config(database_url), revision)

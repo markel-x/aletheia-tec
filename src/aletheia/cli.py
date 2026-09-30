@@ -170,6 +170,12 @@ def _run_service_command(args: argparse.Namespace) -> int:
 
         upgrade(database_url)
         log.info("migrations applied", extra={"head": head_revision()})
+        app_password = os.environ.get("ALETHEIA_APP_DB_PASSWORD")
+        if app_password:
+            from .db.migrations import set_app_role_password
+
+            set_app_role_password(database_url, app_password)
+            log.info("application role password set")
         return 0
     if args.command == "maintenance":
         from .maintenance import run_maintenance
@@ -177,7 +183,7 @@ def _run_service_command(args: argparse.Namespace) -> int:
 
         db = Database(settings)
         try:
-            with db.session() as session:
+            with db.session(bypass_rls=True) as session:
                 run_maintenance(session)
         finally:
             db.dispose()
@@ -215,7 +221,7 @@ def _bootstrap(args: argparse.Namespace, settings: Any) -> int:
     backend = build_backend(settings)
     db = Database(settings)
     try:
-        with db.session() as session:
+        with db.session(bypass_rls=True) as session:
             org, owner, key = bootstrap_organization(
                 session,
                 backend,

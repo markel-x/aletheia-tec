@@ -79,13 +79,26 @@ class StatusList:
         return cls(size=len(raw) * 8 // bits, bits=bits, data=raw)
 
 
+def is_https_or_dev(url: str, dev_http_origin: str | None) -> bool:
+    """``https://`` siempre; ``http://`` sólo bajo el origen local de desarrollo indicado."""
+    if url.startswith("https://"):
+        return True
+    return (
+        dev_http_origin is not None
+        and dev_http_origin.startswith("http://")
+        and url.startswith(dev_http_origin.rstrip("/") + "/")
+    )
+
+
 @dataclass(frozen=True)
 class StatusReference:
     idx: int
     uri: str
 
     @classmethod
-    def from_claims(cls, claims: dict[str, Any]) -> StatusReference:
+    def from_claims(
+        cls, claims: dict[str, Any], *, dev_http_origin: str | None = None
+    ) -> StatusReference:
         ref = (
             claims.get("status", {}).get("status_list")
             if isinstance(claims.get("status"), dict)
@@ -96,7 +109,7 @@ class StatusReference:
         idx, uri = ref.get("idx"), ref.get("uri")
         if not isinstance(idx, int) or isinstance(idx, bool) or idx < 0:
             raise StatusListError("idx inválido")
-        if not isinstance(uri, str) or not uri.startswith("https://"):
+        if not isinstance(uri, str) or not is_https_or_dev(uri, dev_http_origin):
             raise StatusListError("uri de estado debe ser https")
         return cls(idx=idx, uri=uri)
 

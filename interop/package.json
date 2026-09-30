@@ -1,0 +1,12 @@
+{
+  "name": "aletheia-interop",
+  "private": true,
+  "description": "Prueba de interoperabilidad: una implementación independiente de SD-JWT VC (@sd-jwt/*, OpenWallet Foundation) contra la API de Aletheia.",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node run.mjs" },
+  "dependencies": {
+    "@sd-jwt/crypto-nodejs": "0.19.0",
+    "@sd-jwt/sd-jwt-vc": "0.21.1"
+  }
+}

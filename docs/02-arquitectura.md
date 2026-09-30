@@ -196,7 +196,7 @@ Roles por membresía (una persona puede tener roles distintos en varias organiza
 | `audit:read`, `usage:read` | ✔ | ✔ | | | ✔ |
 | `signing_keys:compromise` | ✔ | | | | |
 
-Las claves de API tienen un subconjunto explícito de permisos (nunca `members:manage` ni `signing_keys:compromise`). Todas las consultas se filtran por `organization_id` del principal en la capa de repositorio; un recurso de otra organización responde `404` (no `403`) para no revelar existencia. Defensa en profundidad adicional: Row-Level Security de PostgreSQL con `app.current_org` (incremento 4).
+Las claves de API tienen un subconjunto explícito de permisos (nunca `members:manage` ni `signing_keys:compromise`). Todas las consultas se filtran por `organization_id` del principal en la capa de repositorio; un recurso de otra organización responde `404` (no `403`) para no revelar existencia. Defensa en profundidad adicional: Row-Level Security de PostgreSQL con `app.current_org` (implementada en el incremento 6, migración `0004`, [ADR-0012](adr/0012-row-level-security.md)).
 
 ## 5. Stack y justificación
 

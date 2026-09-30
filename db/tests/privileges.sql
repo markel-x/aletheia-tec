@@ -3,6 +3,23 @@
 \set ON_ERROR_STOP on
 BEGIN;
 
+-- Row-Level Security (0004): sin organización fijada, el rol de la aplicación no ve filas.
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM organization) <> 0 OR (SELECT count(*) FROM audit_event) <> 0 THEN
+    RAISE EXCEPTION 'RLS: el rol de la app ve filas sin app.current_org';
+  END IF;
+END $$;
+-- La app tampoco puede reescribir la revisión del esquema.
+DO $$
+BEGIN
+  UPDATE alembic_version SET version_num = version_num;
+  RAISE EXCEPTION 'la app pudo modificar alembic_version';
+EXCEPTION WHEN insufficient_privilege THEN NULL;
+END $$;
+-- El resto de estas pruebas crea datos propios: organización fijada.
+SELECT set_config('app.current_org', '00000000-0000-7000-8000-0000000000f1', true);
+
 INSERT INTO organization (id, public_id, name)
   VALUES ('00000000-0000-7000-8000-0000000000f1', 'org_zzzzzzzzzzzzzzzzzzzzzz', 'Org de la app');
 INSERT INTO audit_event (id, organization_id, actor_type, action)

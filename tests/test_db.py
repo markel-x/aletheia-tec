@@ -20,7 +20,7 @@ pytestmark = pytest.mark.db
 
 
 def test_head_revision_is_known() -> None:
-    assert head_revision() == "0002"
+    assert head_revision() == "0005"
 
 
 def test_models_match_migrated_schema(migrated_database_url: str) -> None:
@@ -71,7 +71,7 @@ def test_maintenance_expires_offers_and_purges(db_settings: Settings) -> None:
     db = Database(db_settings)
     now = datetime.now(UTC)
     try:
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             org = _org(s)
             s.add(org)
             s.flush()  # sin relationship(), el orden de inserción no se infiere
@@ -143,7 +143,7 @@ def test_maintenance_expires_offers_and_purges(db_settings: Settings) -> None:
                 )
             )
 
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             counts = run_maintenance(s, now=now)
 
         assert counts["offers_expired"] == 1
@@ -152,7 +152,7 @@ def test_maintenance_expires_offers_and_purges(db_settings: Settings) -> None:
         assert counts["rate_limit_buckets"] == 1
         assert counts["verification_records"] == 1
 
-        with db.session() as s:
+        with db.session(bypass_rls=True) as s:
             states = dict(s.execute(select(models.Issuance.id, models.Issuance.state)).all())
             assert states[stale.id] == "offer_expired"
             assert states[fresh.id] == "offered"

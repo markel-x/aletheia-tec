@@ -16,6 +16,8 @@ import pytest
 from aletheia.platform.config import Environment, Settings
 
 TEST_DATABASE_URL = os.environ.get("ALETHEIA_TEST_DATABASE_URL")
+# Rol de la aplicación sobre la misma base: las pruebas de API corren con RLS activo.
+TEST_APP_DATABASE_URL = os.environ.get("ALETHEIA_TEST_APP_DATABASE_URL")
 pytest_plugins = ["tests.fixtures_org"]
 
 
@@ -51,7 +53,7 @@ def migrated_database_url() -> Iterator[str]:
 def db_settings(migrated_database_url: str, tmp_path: Path) -> Settings:
     return Settings(
         env=Environment.TEST,
-        database_url=migrated_database_url,  # type: ignore[arg-type]
+        database_url=TEST_APP_DATABASE_URL or migrated_database_url,  # type: ignore[arg-type]
         log_format="text",
         signing_backend="local_dev",
         dev_keys_dir=tmp_path / "dev-keys",
