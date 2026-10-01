@@ -167,6 +167,7 @@ class CredentialResponse(BaseModel):
     id: uuid.UUID
     public_id: str
     state: str
+    delivery: str
     template_version_id: uuid.UUID
     vct: str
     holder_reference: str | None
@@ -180,9 +181,12 @@ class CredentialResponse(BaseModel):
 
 
 class OfferResponse(CredentialResponse):
+    claim_url: str = Field(
+        description="Página HTTPS para el titular: Apple Wallet u OID4VCI (la codifica el QR)"
+    )
     credential_offer_uri: str = Field(description="URL que sirve la oferta (contiene el offer_id)")
     offer_uri: str = Field(description="URI openid-credential-offer:// para QR o enlace")
-    qr_svg: str = Field(description="QR de offer_uri como SVG (data URI)")
+    qr_svg: str = Field(description="QR de claim_url como SVG (data URI)")
     tx_code: str = Field(description="Se muestra una sola vez; enviar al titular por otro canal")
 
 
@@ -196,9 +200,11 @@ def _credential(i: Any) -> CredentialResponse:
 
 def _offer(offer: service.Offer, settings: Settings) -> OfferResponse:
     offer_uri = service.credential_offer_uri(settings, offer.issuance.offer_id)
-    qr = segno.make(offer_uri, error="m")
+    landing = f"{settings.public_base}/claim/{offer.issuance.offer_id.hex()}"
+    qr = segno.make(landing, error="m")
     return OfferResponse(
         **_credential(offer.issuance).model_dump(),
+        claim_url=landing,
         credential_offer_uri=service.offer_url(settings, offer.issuance.offer_id),
         offer_uri=offer_uri,
         qr_svg=qr.svg_data_uri(scale=4, border=2),

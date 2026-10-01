@@ -24,7 +24,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0015 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0016 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
@@ -33,6 +33,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/incrementos/06.md`](docs/incrementos/06.md) | Reporte del incremento 6: evidencia, criterios de aceptación, pendientes |
 | [`docs/incrementos/07.md`](docs/incrementos/07.md) | Reporte del incremento 7: OID4VP |
 | [`docs/incrementos/08.md`](docs/incrementos/08.md) | Reporte del incremento 8: OID4VP firmado y cifrado |
+| [`docs/poc-iphone.md`](docs/poc-iphone.md) | POC en iPhone: Apple Wallet (pase con QR verificable) y wallet OpenID4VCI |
 | [`docs/runbook.md`](docs/runbook.md) | Operación: despliegue, reversión, alarmas, claves, secretos, restauración |
 | [`loadtest/README.md`](loadtest/README.md) | Prueba de carga: resultados y lectura |
 
@@ -121,6 +122,8 @@ curl -s http://127.0.0.1:8008/.well-known/jwt-vc-issuer/issuers/org_…        #
 | `POST /v1/oid4vp/requests`, `GET /v1/oid4vp/requests/{id}` | `verifications:create` |
 | `GET /oid4vp/request/{ref}` | wallet (solicitud firmada, `oauth-authz-req+jwt`) |
 | `POST /oid4vp/response` | wallet (OID4VP `direct_post` / `direct_post.jwt`) |
+| `GET /claim/{offer_id}`, `GET /claim-info/{offer_id}`, `POST /claim/{offer_id}/apple-pass` | titular (página para recibir: Apple Wallet u OID4VCI) |
+| `GET /v`, `POST /public/pass-verifications` | público (verificación en vivo del QR de un pase) |
 
 Flujo de verificación: `POST /v1/presentation-requests` devuelve `nonce` y `aud` (10 min, un uso); el
 titular presenta `SD-JWT~disclosures~KB-JWT` con ese `aud`/`nonce`; `POST /v1/verifications` ejecuta
@@ -166,6 +169,7 @@ el volumen. Puertos de host: `ALETHEIA_API_PORT` (8008) y `ALETHEIA_DB_PORT` (54
 | `ALETHEIA_TX_CODE_KEY` | — (dev: generada) | Clave HMAC de los `tx_code`, obligatoria desplegado (ADR-0013) |
 | `ALETHEIA_DATABASE_PASSWORD` | — | Reemplaza la contraseña del DSN (inyectada desde Secrets Manager) |
 | `ALETHEIA_VERIFIER_KEY_PEM`, `ALETHEIA_VERIFIER_CERT_CHAIN_PEM` | — (dev: autofirmado) | Identidad X.509 que firma las solicitudes OID4VP (ADR-0015) |
+| `ALETHEIA_PASS_TYPE_IDENTIFIER`, `ALETHEIA_PASS_TEAM_IDENTIFIER`, `ALETHEIA_PASS_CERT_PEM`, `ALETHEIA_PASS_KEY_PEM`, `ALETHEIA_PASS_WWDR_PEM` | dev: certificado de prueba | Pases de Apple Wallet (ADR-0016); sin certificado de Apple el iPhone los rechaza |
 
 Dependencias: `pyproject.toml` + `uv.lock` (versiones exactas y hashes). `make lock` lo regenera con la
 misma versión de `uv` que usa la imagen.

@@ -24,6 +24,10 @@ CSP = (
 )
 
 
+def serve_static(name: str) -> Response:
+    return _serve(name)
+
+
 def _serve(name: str) -> Response:
     path = (STATIC_DIR / name).resolve()
     if not path.is_relative_to(STATIC_DIR) or path.suffix not in _MEDIA_TYPES or not path.is_file():

@@ -126,6 +126,20 @@ services:
     # Copia a /tmp para instalar sin escribir en el repositorio; npm ci respeta el lock exacto.
     command: ["sh", "-c", "cp -r /interop/package.json /interop/package-lock.json /interop/run.mjs /tmp/ && cd /tmp && npm ci --no-audit --no-fund --silent && node run.mjs"]
 
+  # Túnel HTTPS temporal para probar con un teléfono (docs/poc-iphone.md). Expone la API a Internet:
+  # sólo bajo el perfil "tunnel" y detenerlo al terminar.
+  tunnel:
+    image: cloudflare/cloudflared:2025.9.1
+    profiles: ["tunnel"]
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["tunnel", "--no-autoupdate", "--url", "http://api:8000"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
   db:
     image: postgres:16-alpine
     # Contraseñas sólo para desarrollo local; en AWS las gestiona Secrets Manager (doc 02 §6).

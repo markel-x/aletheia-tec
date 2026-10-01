@@ -318,6 +318,7 @@ class Issuance(Base):
     revoked_by: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = _created_at()
     updated_at: Mapped[datetime] = _updated_at()
+    delivery: Mapped[str] = mapped_column(Text, server_default=text("'oid4vci'"))
 
 
 class IssuancePendingClaims(Base):

@@ -21,6 +21,8 @@ from ..issuance import oid4vci as oid4vci_router
 from ..issuance import router as issuance_router
 from ..organizations import router as organizations_router
 from ..organizations.keys import build_backend
+from ..passes import router as passes_router
+from ..passes.signing import load_pass_signer
 from ..platform.config import Settings, get_settings
 from ..platform.crypto import build_encryptor, tx_code_key
 from ..platform.db import Database
@@ -49,6 +51,7 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         app.state.signer_backend = build_backend(settings, kms_client) if has_db else None
         app.state.encryptor = build_encryptor(settings, kms_client) if has_db else None
         app.state.verifier_identity = load_identity(settings) if has_db else None
+        app.state.pass_signer = load_pass_signer(settings) if has_db else None
         if has_db:
             tx_code_key(settings)  # falla al arrancar si falta la clave en un entorno desplegado
         log.info(
@@ -89,4 +92,5 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
     app.include_router(oid4vp_verifier.router)
     app.include_router(oid4vp_verifier.public_router)
     app.include_router(admin_router.router)
+    app.include_router(passes_router.router)
     return app

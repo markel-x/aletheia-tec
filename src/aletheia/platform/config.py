@@ -75,6 +75,19 @@ class Settings(BaseSettings):
     verifier_cert_chain_pem: str | None = None
     """Cadena PEM del verificador, hoja primero. Sin ella, sólo solicitudes sin firmar."""
 
+    pass_type_identifier: str = "pass.uy.aletheia.dev"  # noqa: S105 - identificador, no secreto
+    """Pass Type ID de Apple (``pass.…``) con el que se firman los pases de Wallet."""
+
+    pass_team_identifier: str = "ALETHEIADEV"  # noqa: S105 - identificador, no secreto
+    """Team ID de la cuenta de Apple Developer."""
+
+    pass_cert_pem: str | None = None
+    """Certificado del Pass Type ID (PEM). Con clave y WWDR habilita pases válidos en iPhone."""
+
+    pass_key_pem: SecretStr | None = None
+    pass_wwdr_pem: str | None = None
+    """Certificado intermedio Apple WWDR (G4) en PEM."""
+
     tx_code_key: SecretStr | None = None
     """Clave HMAC (≥ 32 bytes, base64url) de los ``tx_code``. Obligatoria en entornos
     desplegados (Secrets Manager); en desarrollo se genera en ``dev_keys_dir``."""

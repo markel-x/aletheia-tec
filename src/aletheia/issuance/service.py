@@ -475,25 +475,37 @@ def authenticate_access_token(
     return record, issuance
 
 
-def issue_credential(
+@dataclass(frozen=True)
+class SignedCredential:
+    serialized: str
+    claims: dict[str, Any]
+    payload: dict[str, Any]
+    organization: models.Organization
+    template: models.CredentialTemplate
+    version: models.TemplateVersion
+
+
+def sign_and_close(
     session: Session,
     settings: Settings,
     backend: SignerBackend,
     encryptor: DataEncryptor,
     *,
-    access_token: models.Oid4vciAccessToken,
     issuance: models.Issuance,
-    configuration_id: str,
-    holder_jwk: dict[str, Any],
-    now: datetime | None = None,
-) -> str:
-    """Firma la credencial con la clave activa y cierra la emisión en una transacción."""
-    now = now or datetime.now(UTC)
+    holder_jwk: dict[str, Any] | None,
+    delivery: str,
+    now: datetime,
+) -> SignedCredential:
+    """Firma la credencial con la clave activa y cierra la emisión (una transacción).
+
+    ``holder_jwk`` vincula la credencial a la clave del titular (OID4VCI). Sin ella
+    (pase de Apple Wallet, que no gestiona claves) la credencial no lleva ``cnf`` y
+    todos sus claims van visibles: es un comprobante para mostrar, no para presentar
+    con divulgación selectiva (ADR-0016).
+    """
     org = session.get_one(models.Organization, issuance.organization_id)
     version = session.get_one(models.TemplateVersion, issuance.template_version_id)
     template = session.get_one(models.CredentialTemplate, version.template_id)
-    if configuration_id != template.slug:
-        raise OidError("invalid_credential_request", "credential_configuration_id does not match")
     pending = session.get(models.IssuancePendingClaims, issuance.id)
     if pending is None:
         raise OidError("invalid_credential_request", "offer has no pending claims")
@@ -522,23 +534,28 @@ def issue_credential(
         "nbf": iat,
         "exp": exp,
         "vct": issuance.vct,
-        "cnf": {"jwk": {k: holder_jwk[k] for k in ("kty", "crv", "x", "y")}},
         "status": StatusReference(
             idx=issuance.status_idx, uri=status.status_list_uri(settings, status_list.public_id)
         ).to_claim(),
         **claims,
     }
+    if holder_jwk is not None:
+        payload["cnf"] = {"jwk": {k: holder_jwk[k] for k in ("kty", "crv", "x", "y")}}
     issued = issue_sd_jwt_vc(
-        payload, selectively_disclosable=version.selective_disclosure, signer=signer
+        payload,
+        selectively_disclosable=version.selective_disclosure if holder_jwk is not None else [],
+        signer=signer,
     )
 
     issuance.state = "issued"
+    issuance.delivery = delivery
     issuance.signing_key_id = key.id
-    issuance.holder_key_thumbprint = jwk_thumbprint(payload["cnf"]["jwk"])
+    issuance.holder_key_thumbprint = (
+        jwk_thumbprint(payload["cnf"]["jwk"]) if holder_jwk is not None else None
+    )
     issuance.issued_at = now
     issuance.expires_at = now + validity
     session.delete(pending)
-    access_token.consumed_at = now
     audit.record(
         session,
         organization_id=org.id,
@@ -546,7 +563,64 @@ def issue_credential(
         action="credential.issued",
         target_type="issuance",
         target_id=issuance.id,
-        metadata={"kid": key.kid, "template": template.slug, "version": version.version},
+        metadata={
+            "kid": key.kid,
+            "template": template.slug,
+            "version": version.version,
+            "delivery": delivery,
+        },
     )
     usage.record(session, org.id, "credential.issued")
-    return issued.serialized
+    return SignedCredential(issued.serialized, claims, payload, org, template, version)
+
+
+def issue_credential(
+    session: Session,
+    settings: Settings,
+    backend: SignerBackend,
+    encryptor: DataEncryptor,
+    *,
+    access_token: models.Oid4vciAccessToken,
+    issuance: models.Issuance,
+    configuration_id: str,
+    holder_jwk: dict[str, Any],
+    now: datetime | None = None,
+) -> str:
+    """Emisión OID4VCI: credencial vinculada a la clave del titular."""
+    now = now or datetime.now(UTC)
+    version = session.get_one(models.TemplateVersion, issuance.template_version_id)
+    template = session.get_one(models.CredentialTemplate, version.template_id)
+    if configuration_id != template.slug:
+        raise OidError("invalid_credential_request", "credential_configuration_id does not match")
+    signed = sign_and_close(
+        session,
+        settings,
+        backend,
+        encryptor,
+        issuance=issuance,
+        holder_jwk=holder_jwk,
+        delivery="oid4vci",
+        now=now,
+    )
+    access_token.consumed_at = now
+    return signed.serialized
+
+
+def check_offer_code(
+    session: Session,
+    settings: Settings,
+    issuance: models.Issuance,
+    tx_code: str | None,
+    now: datetime,
+) -> None:
+    """Comprobaciones comunes al canje de una oferta (OID4VCI o pase): estado, plazo,
+    bloqueo e intento de ``tx_code``. Un intento fallido se confirma aunque se responda error."""
+    if issuance.state != "offered" or issuance.offer_expires_at <= now:
+        raise OidError("invalid_grant", "unknown, used or expired offer")
+    if issuance.tx_code_attempts >= settings.tx_code_max_attempts:
+        raise OidError("invalid_grant", "offer locked after too many attempts")
+    if not tx_code or not _tx_code_matches(settings, issuance, tx_code):
+        issuance.tx_code_attempts += 1
+        session.flush()
+        session.commit()
+        raise OidError("invalid_grant", "invalid tx_code")

@@ -353,10 +353,11 @@ views.credentials = async () => {
     list.innerHTML =
       "<h2>Emitidas y pendientes</h2>" +
       table(
-        ["Id", "Estado", "Titular (ref.)", "Plantilla (vct)", "Creada", "Expira", "Acciones"],
+        ["Id", "Estado", "Entrega", "Titular (ref.)", "Plantilla (vct)", "Creada", "Expira", "Acciones"],
         items.map((c) => [
           `<span class="mono">${esc(c.public_id)}</span>`,
           tag(c.state),
+          c.state === "issued" || c.state === "revoked" ? (c.delivery === "apple_pass" ? "Apple Wallet" : "Wallet OID4VCI") : "—",
           esc(c.holder_reference || "—"),
           `<span class="mono">${esc(c.vct.split("/types/")[1] || c.vct)}</span>`,
           fmt(c.created_at),
@@ -439,7 +440,9 @@ function showOffer(r) {
     <div class="row">
       <div class="qr"><img alt="QR de la oferta" src="${r.qr_svg}"></div>
       <div>
-        <p><b>Enlace / QR (canal 1):</b><br><code>${esc(r.offer_uri)}</code></p>
+        <p><b>Enlace / QR para el titular (canal 1):</b><br><a href="${esc(r.claim_url)}" target="_blank" rel="noopener"><code>${esc(r.claim_url)}</code></a></p>
+        <p class="muted">El titular elige ahí entre <b>Apple Wallet</b> o su wallet de credenciales (OpenID4VCI).
+          Enlace directo para wallets: <code>${esc(r.offer_uri)}</code></p>
         <div class="secret"><b>Código tx_code (canal 2):</b> <span class="mono big">${esc(r.tx_code)}</span><br>
         <span class="muted">Se muestra una sola vez. Expira: ${fmt(r.offer_expires_at)}.</span></div>
         <p class="muted">Id: <span class="mono">${esc(r.public_id)}</span></p>
