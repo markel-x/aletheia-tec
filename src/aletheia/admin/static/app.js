@@ -4,14 +4,42 @@ const TOKEN_KEY = "aletheia.session";
 const app = document.getElementById("app");
 const nav = document.getElementById("nav");
 const who = document.getElementById("who");
+const shell = document.getElementById("shell");
+const auth = document.getElementById("auth");
+const authCard = document.getElementById("auth-card");
+const crumbs = document.getElementById("crumbs");
+const topbarRight = document.getElementById("topbar-right");
 let me = null;
+let org = null;
+
+// Iconos propios (trazos simples; atributos de presentación, sin estilos en línea: CSP).
+const ICONS = {
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  badge: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M6 16c.6-1.6 1.8-2.4 3-2.4s2.4.8 3 2.4M15 10h3M15 13h3"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  check: '<path d="M12 3 20 6.5v5c0 4.7-3.3 8.3-8 9.5-4.7-1.2-8-4.8-8-9.5v-5z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+  users: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.6c2 .2 3.6 1.5 4.3 4"/>',
+  key: '<circle cx="8" cy="14" r="4"/><path d="m11 11 8-8M16 6l2 2M14 8l2 2"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+  chart: '<path d="M4 20V4M4 20h16"/><path d="m7 15 4-5 3 3 5-7"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1 1-1.1 1.8M12 17h.01"/>',
+};
+function decorateNav() {
+  document.querySelectorAll("[data-icon]").forEach((a) => {
+    if (a.querySelector("svg")) return;
+    const label = a.textContent.trim();
+    a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[a.dataset.icon] || ""}</svg><span class="nav-label">${esc(label)}</span>`;
+    a.title = label;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Utilidades
 // ---------------------------------------------------------------------------
 const esc = (v) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const fmt = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
+const fmt = (iso) => (iso ? new Date(iso).toLocaleString("es-UY", { dateStyle: "short", timeStyle: "short" }) : "—");
 const tag = (v) => `<span class="tag ${esc(v)}">${esc(v)}</span>`;
 const short = (id) => `<span class="mono" title="${esc(id)}">${esc(String(id).slice(0, 8))}…</span>`;
 
@@ -90,10 +118,58 @@ function form(fields, submitLabel, onSubmit) {
   return f;
 }
 
-function table(headers, rows) {
-  return `<table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${
+function table(headers, rows, { filter = false } = {}) {
+  const bar = filter && rows.length > 5 ? `<div class="filter"><input type="search" placeholder="Filtrar por texto" data-filter aria-label="Filtrar"></div>` : "";
+  return `${bar}<div class="table-wrap"><table><thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${
     rows.length ? rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${headers.length}" class="muted">Sin datos</td></tr>`
-  }</tbody></table>`;
+  }</tbody></table></div>`;
+}
+
+// Filtro en el cliente para tablas con barra de filtro.
+document.addEventListener("input", (ev) => {
+  const input = ev.target.closest?.("[data-filter]");
+  if (!input) return;
+  const term = input.value.trim().toLowerCase();
+  const tbody = input.closest(".filter").nextElementSibling?.querySelector("tbody");
+  tbody?.querySelectorAll("tr").forEach((tr) => (tr.hidden = term !== "" && !tr.textContent.toLowerCase().includes(term)));
+});
+
+// Gráfico de líneas SVG (sin bibliotecas).
+function lineChart(labels, series) {
+  const W = 720, H = 220, L = 36, R = 12, T = 12, B = 26;
+  const max = Math.max(1, ...series.flatMap((s) => s.values));
+  const step = Math.max(1, Math.ceil(max / 4));
+  const top = step * 4;
+  const x = (i) => L + (labels.length <= 1 ? (W - L - R) / 2 : (i * (W - L - R)) / (labels.length - 1));
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(series.map((s) => s.name).join(", "))}">`;
+  for (let k = 0; k <= 4; k++) {
+    const v = step * k;
+    svg += `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}</text>`;
+  }
+  labels.forEach((lab, i) => { svg += `<text class="axis" x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(lab)}</text>`; });
+  if (labels.length < 3) {
+    // Con pocos puntos una línea no dice nada: columnas agrupadas por mes.
+    const slot = (W - L - R) / labels.length;
+    const bw = Math.min(56, (slot * 0.6) / series.length);
+    labels.forEach((_, i) => {
+      series.forEach((s, n) => {
+        const v = s.values[i];
+        const bx = L + slot * i + slot / 2 - (bw * series.length) / 2 + n * bw;
+        svg += `<rect class="d${n}" x="${bx}" y="${y(v)}" width="${bw - 4}" height="${Math.max(0, H - B - y(v))}" rx="2"><title>${esc(s.name)} ${esc(labels[i])}: ${v}</title></rect>`;
+      });
+    });
+    labels.forEach((lab, i) => { svg = svg.replace(`<text class="axis" x="${x(i)}" y="${H - 8}"`, `<text class="axis" x="${L + slot * i + slot / 2}" y="${H - 8}"`); });
+  } else {
+    series.forEach((s, n) => {
+      const pts = s.values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+      svg += `<polyline class="s${n}" points="${pts}"/>`;
+      s.values.forEach((v, i) => { svg += `<circle class="d${n}" cx="${x(i)}" cy="${y(v)}" r="2.6"><title>${esc(s.name)} ${esc(labels[i])}: ${v}</title></circle>`; });
+    });
+  }
+  svg += "</svg>";
+  const legend = `<div class="legend">${series.map((s, n) => `<span><i class="l${n}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+  return svg + legend;
 }
 
 function section(title, html) {
@@ -125,25 +201,108 @@ function bind(root, selector, event, handler) {
 const views = {};
 
 views.login = () => {
-  app.innerHTML = `<div class="card login"><h1>Iniciar sesión</h1></div>`;
-  app.querySelector(".card").appendChild(
-    form(
-      [
-        { name: "email", label: "Correo", type: "email", required: true, autocomplete: "username" },
-        { name: "password", label: "Contraseña", type: "password", required: true, autocomplete: "current-password" },
-        { name: "organization", label: "Organización (org_…, sólo si pertenece a varias)" },
-      ],
-      "Entrar",
-      async (d) => {
-        const body = { email: d.email, password: d.password };
-        if (d.organization) body.organization = d.organization;
+  authCard.innerHTML = `
+    <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>aletheia</span></div>
+    <h1>Inicie sesión para gestionar sus credenciales</h1>`;
+  const f = form(
+    [
+      { name: "email", label: "Correo electrónico", type: "email", required: true, autocomplete: "username" },
+      { name: "password", label: "Contraseña", type: "password", required: true, autocomplete: "current-password" },
+    ],
+    "Iniciar sesión",
+    async (d, el) => {
+      const body = { email: d.email, password: d.password };
+      const orgInput = el.querySelector("[name=organization]");
+      if (orgInput && orgInput.value.trim()) body.organization = orgInput.value.trim();
+      try {
         const r = await api("POST", "/v1/auth/login", body);
         sessionStorage.setItem(TOKEN_KEY, r.token);
-        await loadMe();
-        location.hash = "#/credentials";
-      },
-    ),
+      } catch (e) {
+        // Varias organizaciones: se pide elegir sin perder lo escrito.
+        if (String(e.message).startsWith("organization_required")) {
+          el.querySelector("details").open = true;
+          throw new Error("Pertenece a varias organizaciones: indique cuál.");
+        }
+        throw new Error(String(e.message).startsWith("invalid_credentials") ? "Correo o contraseña incorrectos." : e.message);
+      }
+      await loadMe();
+      location.hash = "#/overview";
+      route();
+    },
   );
+  f.querySelector("p").insertAdjacentHTML(
+    "beforebegin",
+    `<details class="more"><summary>¿Pertenece a varias organizaciones?</summary>
+       <label for="f_organization">Organización (org_…)</label>
+       <input id="f_organization" name="organization" autocomplete="off" placeholder="org_…"></details>`,
+  );
+  authCard.appendChild(f);
+  authCard.insertAdjacentHTML("beforeend", `<p class="note">Las organizaciones las da de alta un operador de Aletheia. ¿Sin acceso? Pida una invitación a un administrador de su organización.</p>`);
+  authCard.querySelector("input")?.focus();
+};
+
+// ---------------------------------------------------------------------------
+// Resumen (tablero)
+// ---------------------------------------------------------------------------
+views.overview = async () => {
+  app.innerHTML = `<h1>Resumen</h1>`;
+  const [creds, usage, verifs] = await Promise.all([
+    can("credentials:read") ? api("GET", "/v1/credentials?limit=500").catch(() => []) : [],
+    can("usage:read") ? api("GET", "/v1/usage?months=6").catch(() => ({ months: [] })) : { months: [] },
+    can("verifications:create") ? api("GET", "/v1/verifications?limit=200").catch(() => []) : [],
+  ]);
+  const count = (arr, key, val) => arr.filter((x) => x[key] === val).length;
+  const tiles = [];
+  if (can("credentials:read")) {
+    tiles.push(
+      { v: count(creds, "state", "issued"), label: "Credenciales emitidas", hint: "vigentes o expiradas", cls: "ok" },
+      { v: count(creds, "state", "offered"), label: "Ofertas pendientes", hint: "esperando al wallet", cls: count(creds, "state", "offered") ? "warn" : "" },
+      { v: count(creds, "state", "revoked"), label: "Revocadas / canceladas", hint: "irreversible", cls: count(creds, "state", "revoked") ? "bad" : "" },
+    );
+  }
+  if (can("verifications:create")) {
+    tiles.push(
+      { v: count(verifs, "result", "valid"), label: "Verificaciones válidas", hint: "últimas 200", cls: "ok" },
+      { v: count(verifs, "result", "invalid"), label: "Inválidas", hint: "últimas 200", cls: count(verifs, "result", "invalid") ? "bad" : "" },
+      { v: count(verifs, "result", "indeterminate"), label: "Indeterminadas", hint: "dependencia no disponible", cls: count(verifs, "result", "indeterminate") ? "warn" : "" },
+    );
+  }
+  if (tiles.length) {
+    app.insertAdjacentHTML("beforeend", `<div class="billboards n${tiles.length}">${tiles.map((t) => `<div class="billboard ${t.cls}"><div class="value">${t.v}</div><div><div class="label">${esc(t.label)}</div><div class="hint">${esc(t.hint)}</div></div></div>`).join("")}</div>`);
+  }
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  app.appendChild(grid);
+  if (can("usage:read")) {
+    const months = [...usage.months].reverse();
+    const c = section("Actividad por mes");
+    c.classList.add("span-8");
+    c.innerHTML += months.length
+      ? lineChart(months.map((m) => m.month), [
+          { name: "Credenciales emitidas", values: months.map((m) => m.totals["credential.issued"] || 0) },
+          { name: "Verificaciones", values: months.map((m) => m.totals["verification.performed"] || 0) },
+        ])
+      : `<div class="empty">Sin actividad registrada todavía.</div>`;
+    grid.appendChild(c);
+  }
+  const quick = section("Acciones rápidas");
+  quick.classList.add(can("usage:read") ? "span-4" : "span-12");
+  quick.innerHTML += `<div class="actions">
+      ${can("credentials:issue") ? `<a href="#/credentials"><button type="button">Nueva oferta</button></a>` : ""}
+      ${can("verifications:create") ? `<a href="#/verify"><button type="button" class="secondary">Solicitar a un wallet</button></a>` : ""}
+      ${can("templates:write") ? `<a href="#/templates"><button type="button" class="secondary">Plantillas</button></a>` : ""}
+    </div>
+    <p class="muted">Emisor: <code>${esc(org?.issuer || "")}</code></p>`;
+  grid.appendChild(quick);
+  if (can("verifications:create")) {
+    const c = section("Últimas verificaciones");
+    c.classList.add("span-12");
+    c.innerHTML += table(["Fecha", "Resultado", "Emisor", "Tipo", "Credencial"], verifs.slice(0, 8).map((r) => [
+      `<span class="mono">${fmt(r.created_at)}</span>`, tag(r.result), esc(r.issuer || "—"),
+      esc((r.vct || "").split("/types/")[1] || r.vct || "—"), r.credential_id ? short(r.credential_id) : "externa",
+    ]));
+    grid.appendChild(c);
+  }
 };
 
 views.credentials = async () => {
@@ -193,6 +352,7 @@ views.credentials = async () => {
               : ""
           }</div>`,
         ]),
+        { filter: true },
       );
     bind(list, "[data-reset]", "click", async (el) => showOffer(await api("POST", `/v1/credentials/${el.dataset.reset}/offer:reset`)));
     bind(list, "[data-revoke]", "click", async (el) => {
@@ -500,7 +660,7 @@ views.audit = async () => {
   app.appendChild(section("", table(["Fecha", "Actor", "Acción", "Objetivo", "Detalle", "request_id"], events.map((e) => [
     fmt(e.occurred_at), `${esc(e.actor_type)} ${e.actor_id ? short(e.actor_id) : ""}`, `<code>${esc(e.action)}</code>`,
     `${esc(e.target_type || "")} ${e.target_id ? short(e.target_id) : ""}`, `<code>${esc(JSON.stringify(e.metadata))}</code>`, e.request_id ? short(e.request_id) : "",
-  ]))));
+  ]), { filter: true })));
 };
 
 views.usage = async () => {
@@ -513,25 +673,49 @@ views.usage = async () => {
 // ---------------------------------------------------------------------------
 // Sesión y enrutado
 // ---------------------------------------------------------------------------
+const TITLES = {
+  overview: "Resumen", credentials: "Credenciales", templates: "Plantillas", verify: "Verificación",
+  members: "Miembros", "api-clients": "Claves de API", "signing-keys": "Claves de firma", audit: "Auditoría", usage: "Consumo",
+};
+
 async function loadMe() {
   if (!sessionStorage.getItem(TOKEN_KEY)) { me = null; return; }
   try {
     me = await api("GET", "/v1/auth/me");
-    const org = await api("GET", "/v1/organization");
-    who.innerHTML = `${esc(org.name)} · ${esc(me.role || me.actor_type)} <button class="secondary" id="logout">Salir</button>`;
-    document.getElementById("logout").onclick = async () => { await api("POST", "/v1/auth/logout").catch(() => {}); sessionStorage.removeItem(TOKEN_KEY); me = null; location.hash = "#/login"; };
+    org = await api("GET", "/v1/organization");
+    who.innerHTML = `<strong title="${esc(org.name)}">${esc(org.name)}</strong>${esc(me.role || me.actor_type)}<br><button class="secondary" id="logout" type="button">Cerrar sesión</button>`;
+    topbarRight.innerHTML = `<span class="pill" title="${esc(org.public_id)}">Organización: ${esc(org.name)}</span>`;
+    document.getElementById("logout").onclick = async () => {
+      await api("POST", "/v1/auth/logout").catch(() => {});
+      sessionStorage.removeItem(TOKEN_KEY);
+      me = null;
+      location.hash = "#/login";
+      route();
+    };
   } catch { me = null; }
 }
 
 async function route() {
-  const name = (location.hash.replace(/^#\//, "") || "credentials").split("/")[0];
-  if (!me) { nav.hidden = true; who.innerHTML = ""; views.login(); return; }
-  nav.hidden = false;
-  nav.querySelectorAll("a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#/${name}`));
-  const view = views[name] || views.credentials;
-  try { await view(); } catch (e) { app.innerHTML = `<div class="card">Error: ${esc(e.message)}</div>`; }
+  const name = (location.hash.replace(/^#\//, "") || "overview").split("/")[0];
+  if (!me) { shell.hidden = true; auth.hidden = false; views.login(); return; }
+  auth.hidden = true;
+  shell.hidden = false;
+  const key = views[name] && name !== "login" ? name : "overview";
+  nav.querySelectorAll("a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#/${key}`));
+  crumbs.innerHTML = `${esc(org?.name || "")} / <b>${esc(TITLES[key] || key)}</b>`;
+  document.title = `${TITLES[key] || "Aletheia"} · Aletheia`;
+  try { await views[key](); } catch (e) { app.innerHTML = `<div class="card">Error: ${esc(e.message)}</div>`; }
 }
 
+try {
+  if (localStorage.getItem("aletheia.sidebar") === "collapsed") shell.classList.add("collapsed");
+} catch { /* almacenamiento no disponible */ }
+document.getElementById("collapse").addEventListener("click", () => {
+  shell.classList.toggle("collapsed");
+  try { localStorage.setItem("aletheia.sidebar", shell.classList.contains("collapsed") ? "collapsed" : "open"); } catch { /* idem */ }
+});
+
+decorateNav();
 window.addEventListener("hashchange", route);
 await loadMe();
 route();

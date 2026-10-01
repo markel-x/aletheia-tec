@@ -3,25 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Aletheia · Panel</title>
+  <meta name="color-scheme" content="dark">
+  <title>Aletheia</title>
   <link rel="stylesheet" href="/admin/static/style.css">
 </head>
 <body>
-  <header>
-    <a class="brand" href="#/credentials">Aletheia</a>
-    <nav id="nav" hidden>
-      <a href="#/credentials">Credenciales</a>
-      <a href="#/templates">Plantillas</a>
-      <a href="#/verify">Verificación</a>
-      <a href="#/members">Miembros</a>
-      <a href="#/api-clients">Claves de API</a>
-      <a href="#/signing-keys">Claves de firma</a>
-      <a href="#/audit">Auditoría</a>
-      <a href="#/usage">Consumo</a>
-    </nav>
-    <div id="who" class="who"></div>
-  </header>
-  <main id="app"><p class="muted">Cargando…</p></main>
+  <!-- Acceso -->
+  <div id="auth" class="auth" hidden>
+    <div class="auth-card" id="auth-card"></div>
+    <footer class="auth-footer">
+      <nav>
+        <a href="/docs" target="_blank" rel="noopener">API</a>
+        <a href="https://github.com/markel-x/aletheia-tec" target="_blank" rel="noopener">Proyecto</a>
+      </nav>
+      <span>Aletheia · credenciales verificables</span>
+    </footer>
+  </div>
+
+  <!-- Aplicación -->
+  <div id="shell" class="shell" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#/overview" aria-label="Aletheia · inicio">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+          <path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-name">aletheia</span>
+      </a>
+      <nav id="nav" class="nav" aria-label="Principal">
+        <a href="#/overview" data-icon="grid">Resumen</a>
+        <a href="#/credentials" data-icon="badge">Credenciales</a>
+        <a href="#/templates" data-icon="layers">Plantillas</a>
+        <a href="#/verify" data-icon="check">Verificación</a>
+        <span class="nav-group">Organización</span>
+        <a href="#/members" data-icon="users">Miembros</a>
+        <a href="#/api-clients" data-icon="key">Claves de API</a>
+        <a href="#/signing-keys" data-icon="pen">Claves de firma</a>
+        <a href="#/audit" data-icon="list">Auditoría</a>
+        <a href="#/usage" data-icon="chart">Consumo</a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="/docs" target="_blank" rel="noopener" data-icon="help">API</a>
+        <div id="who" class="who"></div>
+        <button type="button" class="collapse" id="collapse" aria-label="Contraer menú" title="Contraer menú">⇤</button>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="crumbs" id="crumbs"></div>
+        <div class="topbar-right" id="topbar-right"></div>
+      </header>
+      <main id="app" class="content"><p class="muted">Cargando…</p></main>
+    </div>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
   <script type="module" src="/admin/static/app.js"></script>
 </body>
