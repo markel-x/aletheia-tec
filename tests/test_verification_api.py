@@ -280,6 +280,8 @@ def test_admin_panel_is_served_with_csp(client: TestClient) -> None:
     assert r.headers["content-security-policy"].startswith("default-src 'self'")
     assert "Aletheia" in r.text
     assert client.get("/admin/static/app.js").status_code == 200
+    help_js = client.get("/admin/static/help.js")
+    assert help_js.status_code == 200 and "FIELD_HELP" in help_js.text
     assert (
         client.get("/admin/static/style.css").headers["content-type"] == "text/css; charset=utf-8"
     )

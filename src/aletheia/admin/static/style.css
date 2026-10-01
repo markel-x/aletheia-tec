@@ -139,7 +139,7 @@ pre { background: var(--bg); border: 1px solid var(--line); color: var(--fg-2); 
 .tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; letter-spacing: .02em; background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line-strong); }
 .tag.issued, .tag.valid, .tag.active, .tag.published, .tag.completed, .tag.pass, .tag.ok { color: var(--ok-fg); border-color: rgba(31, 157, 102, .5); background: rgba(31, 157, 102, .12); }
 .tag.revoked, .tag.invalid, .tag.compromised, .tag.failed, .tag.fail { color: var(--bad-fg); border-color: rgba(214, 58, 58, .5); background: rgba(214, 58, 58, .12); }
-.tag.offered, .tag.indeterminate, .tag.retired, .tag.draft, .tag.pending, .tag.expired, .tag.skipped { color: var(--warn-fg); border-color: rgba(224, 123, 22, .5); background: rgba(224, 123, 22, .12); }
+.tag.offered, .tag.offer_expired, .tag.indeterminate, .tag.retired, .tag.draft, .tag.pending, .tag.expired, .tag.skipped { color: var(--warn-fg); border-color: rgba(224, 123, 22, .5); background: rgba(224, 123, 22, .12); }
 
 .secret { background: rgba(224, 123, 22, .08); border: 1px dashed rgba(224, 123, 22, .6); color: var(--fg); padding: 10px 12px; border-radius: 4px; margin: 10px 0; }
 .big { font-size: 1.5em; letter-spacing: .08em; }
@@ -168,3 +168,52 @@ pre { background: var(--bg); border: 1px solid var(--line); color: var(--fg-2); 
 .auth-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 18px 32px; color: #8b979f; font-size: 12px; flex-wrap: wrap; }
 .auth-footer nav { display: flex; gap: 22px; }
 .auth-footer a { color: #dfe4e8; }
+
+/* ---------------------------------------------------------------- Ayudas */
+.field-help, .section-help { margin: 4px 0 2px; font-size: 12px; }
+.field-help > summary, .section-help > summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--link); list-style: none; user-select: none; }
+.field-help > summary::-webkit-details-marker, .section-help > summary::-webkit-details-marker { display: none; }
+.field-help > summary::before, .section-help > summary::before { content: "?"; display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid currentColor; font-size: 10px; font-weight: 700; line-height: 1; }
+.field-help[open] > summary::before, .section-help[open] > summary::before { content: "–"; }
+.section-help { margin: -4px 0 12px; }
+.help-panel { margin-top: 6px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; color: var(--fg-2); line-height: 1.55; }
+.help-panel ul, .help-panel ol { margin: 6px 0; padding-left: 18px; }
+.help-panel pre { margin: 6px 0 0; white-space: pre; }
+.help-panel code { color: var(--fg); }
+.claims-guide { margin: 8px 0 4px; }
+.claims-guide:empty { display: none; }
+.claims-guide .guide-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; color: var(--fg); }
+.claims-guide table { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; }
+.claims-guide p { margin: 6px 0 0; font-size: 12px; }
+
+/* Vista Ayuda */
+.help-layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; align-items: start; }
+.help-toc { position: sticky; top: 64px; display: flex; flex-direction: column; gap: 1px; background: var(--bg); z-index: 1; }
+.help-toc a { padding: 6px 10px; border-radius: 4px; color: var(--fg-2); font-size: 13px; }
+.help-toc a:hover { background: var(--surface-hover); text-decoration: none; color: var(--fg); }
+.help-toc a.active { background: var(--surface-2); color: var(--fg); font-weight: 600; }
+@media (max-width: 900px) { .help-layout { grid-template-columns: 1fr; } .help-toc { position: static; } }
+.help-doc { scroll-margin-top: 64px; line-height: 1.6; color: var(--fg-2); }
+.help-doc h2 { font-size: 16px; color: var(--fg); }
+.help-doc h3 { font-size: 13px; color: var(--fg); margin: 16px 0 8px; }
+.help-doc td { white-space: normal; }
+.help-doc table { margin: 6px 0; }
+.glossary { display: grid; grid-template-columns: 200px 1fr; gap: 8px 16px; margin: 0; }
+.glossary dt { color: var(--fg); font-weight: 600; }
+.glossary dd { margin: 0; }
+@media (max-width: 700px) { .glossary { grid-template-columns: 1fr; } }
+.steps { padding-left: 20px; } .steps li { margin: 6px 0; }
+.faq { border-top: 1px solid var(--line); padding: 8px 0; }
+.faq summary { cursor: pointer; color: var(--fg); font-weight: 500; }
+.faq p { margin: 6px 0 0; }
+
+/* Guía pública (antes de iniciar sesión) con el tema de la aplicación */
+.auth-card.wide { width: min(1180px, calc(100vw - 32px)); margin-top: 32px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+.auth-card.wide h1 { font-size: 22px; }
+.auth-card.wide label { color: var(--fg-2); }
+.auth-card.wide input { background: var(--surface-2); color: var(--fg); border-color: var(--line); }
+.auth-card .field-help > summary { color: #0b6bcb; }
+.auth-card:not(.wide) .help-panel { background: #fff; border-color: #dfe4e8; border-left-color: #4f5bd5; color: #3d4a53; }
+.auth-card:not(.wide) .help-panel code { color: #1d252c; }
+.auth-card .filter input { padding-left: 30px; }
+.auth-card:not(.wide) .note a { color: #0b6bcb; }

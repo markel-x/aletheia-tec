@@ -1,5 +1,7 @@
 // Panel de Aletheia: módulos ES, sin dependencias. Cliente de /v1 con token de sesión.
 
+import { DOCS, ERROR_TIPS, FIELD_HELP, SECTION_HELP } from "./help.js";
+
 const TOKEN_KEY = "aletheia.session";
 const app = document.getElementById("app");
 const nav = document.getElementById("nav");
@@ -24,6 +26,7 @@ const ICONS = {
   list: '<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   chart: '<path d="M4 20V4M4 20h16"/><path d="m7 15 4-5 3 3 5-7"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1 1-1.1 1.8M12 17h.01"/>',
+  code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
 };
 function decorateNav() {
   document.querySelectorAll("[data-icon]").forEach((a) => {
@@ -73,30 +76,29 @@ async function api(method, path, body, headers = {}) {
     }
     const e = data.error || {};
     const detail = e.details ? ` (${JSON.stringify(e.details)})` : "";
-    throw new Error(`${e.code || res.status}: ${e.message || "error"}${detail}`);
+    const tip = ERROR_TIPS[e.code] ? ` — ${ERROR_TIPS[e.code]}` : "";
+    throw new Error(`${e.code || res.status}: ${e.message || "error"}${detail}${tip}`);
   }
   return data;
 }
 
 const can = (perm) => !!me && me.permissions.includes(perm);
 
+// Ayuda desplegable bajo un campo o al inicio de una sección (contenido de help.js).
+const fieldHelp = (key) =>
+  key && FIELD_HELP[key]
+    ? `<details class="field-help"><summary>Cómo completarlo</summary><div class="help-panel">${FIELD_HELP[key]}</div></details>`
+    : "";
+const sectionHelp = (key) =>
+  key && SECTION_HELP[key]
+    ? `<details class="section-help"><summary>¿Qué es esto?</summary><div class="help-panel">${SECTION_HELP[key]}</div></details>`
+    : "";
+
 function form(fields, submitLabel, onSubmit) {
   const f = document.createElement("form");
   f.innerHTML =
     fields
-      .map((x) => {
-        const id = `f_${x.name}`;
-        if (x.type === "select")
-          return `<label for="${id}">${esc(x.label)}</label><select id="${id}" name="${x.name}">${x.options
-            .map((o) => (typeof o === "string" ? { value: o, label: o } : o))
-            .map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`)
-            .join("")}</select>`;
-        if (x.type === "textarea")
-          return `<label for="${id}">${esc(x.label)}</label><textarea id="${id}" name="${x.name}" ${x.required ? "required" : ""}>${esc(x.value || "")}</textarea>`;
-        if (x.type === "checkbox")
-          return `<label><input type="checkbox" class="inline" name="${x.name}" ${x.checked ? "checked" : ""}> ${esc(x.label)}</label>`;
-        return `<label for="${id}">${esc(x.label)}</label><input id="${id}" name="${x.name}" type="${x.type || "text"}" value="${esc(x.value || "")}" ${x.required ? "required" : ""} ${x.placeholder ? `placeholder="${esc(x.placeholder)}"` : ""} autocomplete="${x.autocomplete || "off"}">`;
-      })
+      .map((x) => fieldMarkup(x) + fieldHelp(x.help) + (x.after || ""))
       .join("") + `<p><button type="submit">${esc(submitLabel)}</button></p>`;
   f.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -116,6 +118,20 @@ function form(fields, submitLabel, onSubmit) {
     }
   });
   return f;
+}
+
+function fieldMarkup(x) {
+        const id = `f_${x.name}`;
+        if (x.type === "select")
+          return `<label for="${id}">${esc(x.label)}</label><select id="${id}" name="${x.name}">${x.options
+            .map((o) => (typeof o === "string" ? { value: o, label: o } : o))
+            .map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`)
+            .join("")}</select>`;
+        if (x.type === "textarea")
+          return `<label for="${id}">${esc(x.label)}</label><textarea id="${id}" name="${x.name}" ${x.required ? "required" : ""}>${esc(x.value || "")}</textarea>`;
+        if (x.type === "checkbox")
+          return `<label><input type="checkbox" class="inline" name="${x.name}" ${x.checked ? "checked" : ""}> ${esc(x.label)}</label>`;
+        return `<label for="${id}">${esc(x.label)}</label><input id="${id}" name="${x.name}" type="${x.type || "text"}" value="${esc(x.value || "")}" ${x.required ? "required" : ""} ${x.placeholder ? `placeholder="${esc(x.placeholder)}"` : ""} autocomplete="${x.autocomplete || "off"}">`;
 }
 
 function table(headers, rows, { filter = false } = {}) {
@@ -172,10 +188,10 @@ function lineChart(labels, series) {
   return svg + legend;
 }
 
-function section(title, html) {
+function section(title, html, helpKey) {
   const el = document.createElement("section");
   el.className = "card";
-  el.innerHTML = (title ? `<h2>${esc(title)}</h2>` : "") + (html || "");
+  el.innerHTML = (title ? `<h2>${esc(title)}</h2>` : "") + sectionHelp(helpKey) + (html || "");
   return el;
 }
 
@@ -206,8 +222,8 @@ views.login = () => {
     <h1>Inicie sesión para gestionar sus credenciales</h1>`;
   const f = form(
     [
-      { name: "email", label: "Correo electrónico", type: "email", required: true, autocomplete: "username" },
-      { name: "password", label: "Contraseña", type: "password", required: true, autocomplete: "current-password" },
+      { name: "email", label: "Correo electrónico", type: "email", required: true, autocomplete: "username", help: "login.email" },
+      { name: "password", label: "Contraseña", type: "password", required: true, autocomplete: "current-password", help: "login.password" },
     ],
     "Iniciar sesión",
     async (d, el) => {
@@ -234,10 +250,10 @@ views.login = () => {
     "beforebegin",
     `<details class="more"><summary>¿Pertenece a varias organizaciones?</summary>
        <label for="f_organization">Organización (org_…)</label>
-       <input id="f_organization" name="organization" autocomplete="off" placeholder="org_…"></details>`,
+       <input id="f_organization" name="organization" autocomplete="off" placeholder="org_…">${fieldHelp("login.organization")}</details>`,
   );
   authCard.appendChild(f);
-  authCard.insertAdjacentHTML("beforeend", `<p class="note">Las organizaciones las da de alta un operador de Aletheia. ¿Sin acceso? Pida una invitación a un administrador de su organización.</p>`);
+  authCard.insertAdjacentHTML("beforeend", `<p class="note">Las organizaciones las da de alta un operador de Aletheia. ¿Sin acceso? Pida una invitación a un administrador de su organización. <a href="#/help">Guía de uso</a></p>`);
   authCard.querySelector("input")?.focus();
 };
 
@@ -309,13 +325,13 @@ views.credentials = async () => {
   app.innerHTML = `<h1>Credenciales</h1>`;
   if (can("credentials:issue")) {
     const templates = await api("GET", "/v1/templates").catch(() => []);
-    const issue = section("Nueva oferta");
+    const issue = section("Nueva oferta", "", "offer");
     issue.appendChild(
       form(
         [
-          { name: "template", label: "Plantilla", type: "select", options: templates.map((t) => t.slug) },
-          { name: "holder_reference", label: "Referencia del titular (opaca, opcional)" },
-          { name: "claims", label: "Claims (JSON)", type: "textarea", required: true, value: '{\n  "course": {"title": "", "hours": 0},\n  "given_name": "",\n  "family_name": "",\n  "completion_date": "2026-01-01"\n}' },
+          { name: "template", label: "Plantilla", type: "select", options: templates.map((t) => t.slug), help: "offer.template", after: `<div class="claims-guide" data-claims-guide></div>` },
+          { name: "holder_reference", label: "Referencia del titular (opaca, opcional)", placeholder: "LEG-2026-00412", help: "offer.holder_reference" },
+          { name: "claims", label: "Claims (JSON)", type: "textarea", required: true, value: "{}", help: "offer.claims" },
         ],
         "Crear oferta",
         async (d) => {
@@ -328,6 +344,7 @@ views.credentials = async () => {
       ),
     );
     app.appendChild(issue);
+    wireClaimsGuide(issue, templates);
   }
   const list = section("Emitidas y pendientes", "");
   app.appendChild(list);
@@ -366,6 +383,56 @@ views.credentials = async () => {
   await refreshList();
 };
 
+// Lista los campos de la versión publicada de la plantilla elegida y ofrece un ejemplo válido.
+function walkSchema(node, prefix = "", required = []) {
+  return Object.entries(node.properties || {}).flatMap(([name, sub]) => {
+    const path = prefix + name;
+    const own = { path, type: sub.type, required: required.includes(name), enum: sub.enum, max: sub.maxLength, min: sub.minimum };
+    return sub.type === "object" ? [own, ...walkSchema(sub, path + ".", sub.required || [])] : [own];
+  });
+}
+function exampleFor(node) {
+  switch (node.type) {
+    case "object": return Object.fromEntries(Object.entries(node.properties || {}).map(([k, v]) => [k, exampleFor(v)]));
+    case "string": return node.enum ? node.enum[0] : "";
+    case "integer": case "number": return node.enum ? node.enum[0] : node.minimum ?? 0;
+    case "boolean": return false;
+    case "date": return new Date().toISOString().slice(0, 10);
+    default: return null;
+  }
+}
+const TYPE_LABEL = { string: "texto", integer: "número entero", number: "número", boolean: "sí/no (true/false)", date: "fecha AAAA-MM-DD", object: "grupo" };
+function wireClaimsGuide(card, templates) {
+  const select = card.querySelector("[name=template]");
+  const guide = card.querySelector("[data-claims-guide]");
+  const textarea = card.querySelector("[name=claims]");
+  if (!select || !guide) return;
+  const render = async () => {
+    const t = templates.find((x) => x.slug === select.value);
+    if (!t) { guide.innerHTML = `<p class="muted">No hay plantillas publicadas. Cree una en <a href="#/templates">Plantillas</a>.</p>`; return; }
+    const versions = await api("GET", `/v1/templates/${t.id}/versions`).catch(() => []);
+    const v = [...versions].reverse().find((x) => x.state === "published");
+    if (!v) { guide.innerHTML = `<p class="muted">La plantilla no tiene versión publicada.</p>`; return; }
+    const sd = new Set(v.selective_disclosure);
+    const fields = walkSchema(v.claims_schema, "", v.claims_schema.required || []);
+    guide.innerHTML = `<div class="guide-head"><b>Campos de «${esc(t.name)}» (versión ${v.version})</b>
+        <button type="button" class="secondary" data-insert>Insertar ejemplo</button></div>` +
+      table(["Campo", "Tipo", "Obligatorio", "El titular puede ocultarlo"], fields.map((f) => [
+        `<code>${esc(f.path)}</code>`,
+        esc(TYPE_LABEL[f.type] || f.type) + (f.enum ? ` <span class="muted">(${esc(f.enum.join(" / "))})</span>` : ""),
+        f.required ? "sí *" : "no",
+        sd.has(f.path) ? "sí" : "no",
+      ])) + `<p class="muted">Validez de cada credencial: ${v.validity_days} días.</p>`;
+    guide.querySelector("[data-insert]").addEventListener("click", () => {
+      textarea.value = JSON.stringify(exampleFor(v.claims_schema), null, 2);
+      textarea.focus();
+    });
+    if (!textarea.value.trim() || textarea.value.trim() === "{}") textarea.value = JSON.stringify(exampleFor(v.claims_schema), null, 2);
+  };
+  select.addEventListener("change", render);
+  render();
+}
+
 function showOffer(r) {
   const el = section("Oferta creada — entregue estos datos al titular por canales distintos");
   el.innerHTML += `
@@ -386,12 +453,12 @@ views.templates = async () => {
   app.innerHTML = `<h1>Plantillas</h1>`;
   const templates = await api("GET", "/v1/templates");
   if (can("templates:write")) {
-    const c = section("Nueva plantilla");
+    const c = section("Nueva plantilla", "", "templates");
     c.appendChild(
       form(
         [
-          { name: "slug", label: "Slug (minúsculas, guiones; forma parte del vct)", required: true, placeholder: "course-completion" },
-          { name: "name", label: "Nombre", required: true },
+          { name: "slug", label: "Identificador (slug)", required: true, placeholder: "certificado-curso", help: "template.slug" },
+          { name: "name", label: "Nombre", required: true, placeholder: "Certificado de finalización de curso", help: "template.name" },
         ],
         "Crear",
         async (d) => {
@@ -421,9 +488,9 @@ views.templates = async () => {
       c.appendChild(
         form(
           [
-            { name: "claims_schema", label: "Esquema de claims (JSON restringido)", type: "textarea", required: true, value: JSON.stringify(versions.at(-1)?.claims_schema || DEFAULT_SCHEMA, null, 2) },
-            { name: "selective_disclosure", label: "Rutas divulgables (separadas por coma)", value: versions.at(-1)?.selective_disclosure.join(", ") || "given_name, family_name, completion_date, course.grade" },
-            { name: "validity_days", label: "Validez (días)", type: "number", value: versions.at(-1)?.validity_days || 365, required: true },
+            { name: "claims_schema", label: "Esquema de claims (JSON restringido)", type: "textarea", required: true, value: JSON.stringify(versions.at(-1)?.claims_schema || DEFAULT_SCHEMA, null, 2), help: "version.claims_schema" },
+            { name: "selective_disclosure", label: "Campos que el titular puede ocultar (separados por coma)", value: versions.at(-1)?.selective_disclosure.join(", ") || "given_name, family_name, completion_date, course.grade", help: "version.selective_disclosure" },
+            { name: "validity_days", label: "Validez (días)", type: "number", value: versions.at(-1)?.validity_days || 365, required: true, help: "version.validity_days" },
           ],
           "Crear versión (borrador)",
           async (d) => {
@@ -463,14 +530,14 @@ views.verify = async () => {
   app.innerHTML = `<h1>Verificación</h1>`;
   const policies = await api("GET", "/v1/trust-policies");
   if (can("trust_policies:write")) {
-    const c = section("Nueva política de confianza");
+    const c = section("Nueva política de confianza", "", "policy");
     c.appendChild(
       form(
         [
-          { name: "name", label: "Nombre", required: true },
-          { name: "accepted_vcts", label: "vct aceptados (coma; vacío = todos)" },
-          { name: "required_claims", label: "Claims requeridos (coma)" },
-          { name: "require_holder_binding", label: "Exigir vinculación con el titular (KB-JWT)", type: "checkbox", checked: true },
+          { name: "name", label: "Nombre", required: true, placeholder: "admisión-posgrado", help: "policy.name" },
+          { name: "accepted_vcts", label: "Tipos de credencial aceptados (vct, separados por coma)", help: "policy.accepted_vcts" },
+          { name: "required_claims", label: "Datos requeridos (separados por coma)", placeholder: "family_name", help: "policy.required_claims" },
+          { name: "require_holder_binding", label: "Exigir vinculación con el titular (KB-JWT)", type: "checkbox", checked: true, help: "policy.require_holder_binding" },
         ],
         "Crear política",
         async (d) => {
@@ -494,7 +561,7 @@ views.verify = async () => {
         can("trust_policies:write") ? `<button class="danger" data-rm="${p.id}/${t.id}">Quitar</button>` : "",
       ]));
     if (can("trust_policies:write")) {
-      c.appendChild(form([{ name: "issuer", label: "Añadir emisor confiable (URL iss)", required: true, placeholder: location.origin + "/issuers/org_…" }], "Añadir", async (d) => {
+      c.appendChild(form([{ name: "issuer", label: "Añadir emisor confiable (URL iss)", required: true, placeholder: location.origin + "/issuers/org_…", help: "policy.issuer" }], "Añadir", async (d) => {
         await api("POST", `/v1/trust-policies/${p.id}/issuers`, { issuer: d.issuer });
         route();
       }));
@@ -506,21 +573,21 @@ views.verify = async () => {
     });
   }
   if (policies.length && can("verifications:create")) {
-    const w = section("Solicitar a un wallet (OID4VP)");
+    const w = section("Solicitar a un wallet (OID4VP)", "", "oid4vp");
     w.innerHTML += `<p class="muted">Muestra un QR que un wallet OID4VP 1.0 escanea; el titular elige compartir los claims pedidos y el resultado aparece aquí.</p>`;
     const withVct = policies.filter((p) => p.accepted_vcts.length);
     if (!withVct.length) {
       w.innerHTML += `<p class="muted">Ninguna política define vct aceptados: agregue al menos uno para poder pedir la credencial por DCQL.</p>`;
     } else {
       w.appendChild(form([
-        { name: "trust_policy_id", label: "Política", type: "select", options: withVct.map((p) => ({ value: p.id, label: p.name })) },
-        { name: "claims", label: "Claims a pedir (rutas separadas por coma; vacío = los requeridos por la política)", placeholder: "family_name, course.grade" },
+        { name: "trust_policy_id", label: "Política", type: "select", options: withVct.map((p) => ({ value: p.id, label: p.name })), help: "oid4vp.trust_policy_id" },
+        { name: "claims", label: "Datos a pedir (separados por coma; vacío = los requeridos por la política)", placeholder: "family_name, course.grade", help: "oid4vp.claims" },
         { name: "client_id_scheme", label: "Identificación del verificador", type: "select", options: [
           { value: "x509_hash", label: "x509_hash — solicitud firmada (HAIP)" },
           { value: "x509_san_dns", label: "x509_san_dns — solicitud firmada, dominio en el certificado" },
           { value: "redirect_uri", label: "redirect_uri — sin firmar (sólo wallets que lo admitan)" },
-        ] },
-        { name: "encrypt_response", label: "Cifrar la respuesta del wallet (direct_post.jwt)", type: "checkbox", checked: true },
+        ], help: "oid4vp.client_id_scheme" },
+        { name: "encrypt_response", label: "Cifrar la respuesta del wallet (direct_post.jwt)", type: "checkbox", checked: true, help: "oid4vp.encrypt_response" },
       ], "Crear solicitud OID4VP", async (d) => {
         const body = { trust_policy_id: d.trust_policy_id, client_id_scheme: d.client_id_scheme, encrypt_response: d.encrypt_response };
         const paths = d.claims.split(",").map((x) => x.trim()).filter(Boolean).map((x) => x.split("."));
@@ -555,15 +622,15 @@ views.verify = async () => {
     }
     app.appendChild(w);
 
-    const c = section("Verificar una presentación");
+    const c = section("Verificar una presentación", "", "present");
     c.innerHTML += `<p class="muted">1) Cree una solicitud y entregue <code>nonce</code> y <code>aud</code> al titular. 2) Pegue la presentación (SD-JWT~disclosures~KB-JWT).</p>`;
     let request = null;
-    const reqForm = form([{ name: "trust_policy_id", label: "Política", type: "select", options: policies.map((p) => ({ value: p.id, label: p.name })) }], "Crear solicitud de presentación", async (d, f) => {
+    const reqForm = form([{ name: "trust_policy_id", label: "Política", type: "select", options: policies.map((p) => ({ value: p.id, label: p.name })), help: "present.trust_policy_id" }], "Crear solicitud de presentación", async (d, f) => {
       request = await api("POST", "/v1/presentation-requests", { trust_policy_id: d.trust_policy_id });
       f.insertAdjacentHTML("beforeend", `<div class="secret"><b>nonce:</b> <code>${esc(request.nonce)}</code><br><b>aud:</b> <code>${esc(request.aud)}</code><br><span class="muted">expira ${fmt(request.expires_at)}</span></div>`);
     });
     c.appendChild(reqForm);
-    c.appendChild(form([{ name: "presentation", label: "Presentación", type: "textarea", required: true }], "Verificar", async (d) => {
+    c.appendChild(form([{ name: "presentation", label: "Presentación (SD-JWT~…~KB-JWT)", type: "textarea", required: true, help: "present.presentation" }], "Verificar", async (d) => {
       const body = { presentation: d.presentation.trim() };
       if (request) body.presentation_request_id = request.id; else body.trust_policy_id = policies[0].id;
       const r = await api("POST", "/v1/verifications", body);
@@ -580,11 +647,11 @@ views.verify = async () => {
 views.members = async () => {
   app.innerHTML = `<h1>Miembros</h1>`;
   const roles = ["owner", "admin", "issuer", "verifier", "auditor"];
-  const c = section("Añadir miembro");
+  const c = section("Añadir miembro", "", "members");
   c.appendChild(form([
-    { name: "email", label: "Correo", type: "email", required: true },
-    { name: "display_name", label: "Nombre", required: true },
-    { name: "role", label: "Rol", type: "select", options: roles },
+    { name: "email", label: "Correo", type: "email", required: true, help: "member.email" },
+    { name: "display_name", label: "Nombre", required: true, help: "member.display_name" },
+    { name: "role", label: "Rol", type: "select", options: roles, help: "member.role" },
   ], "Añadir", async (d) => {
     const r = await api("POST", "/v1/members", d);
     if (r.temporary_password) c.insertAdjacentHTML("beforeend", `<div class="secret">Contraseña temporal de ${esc(r.email)} (una sola vez): <code>${esc(r.temporary_password)}</code></div>`);
@@ -609,9 +676,9 @@ views.members = async () => {
 views["api-clients"] = async () => {
   app.innerHTML = `<h1>Claves de API</h1>`;
   const perms = me.permissions.filter((p) => !["members:manage", "signing_keys:compromise"].includes(p));
-  const c = section("Nueva clave");
+  const c = section("Nueva clave", "", "apiclients");
   c.innerHTML += `<label>Permisos</label><div>${perms.map((p) => `<label class="perm"><input type="checkbox" class="inline" value="${p}"> ${p}</label>`).join("")}</div>`;
-  c.appendChild(form([{ name: "name", label: "Nombre", required: true }], "Crear clave", async (d) => {
+  c.appendChild(form([{ name: "name", label: "Nombre", required: true, placeholder: "SIS académico — producción", help: "apiclient.name" }], "Crear clave", async (d) => {
     const permissions = [...c.querySelectorAll("input[type=checkbox]:checked")].map((x) => x.value);
     const r = await api("POST", "/v1/api-clients", { name: d.name, permissions });
     c.insertAdjacentHTML("beforeend", `<div class="secret">Clave (una sola vez): <code>${esc(r.key)}</code></div>`);
@@ -634,7 +701,7 @@ views["api-clients"] = async () => {
 views["signing-keys"] = async () => {
   app.innerHTML = `<h1>Claves de firma</h1>`;
   const org = await api("GET", "/v1/organization");
-  const c = section("Emisor");
+  const c = section("Emisor", "", "signingkeys");
   c.innerHTML += `<p>iss: <code>${esc(org.issuer)}</code><br>Metadatos: <a href="/.well-known/jwt-vc-issuer/issuers/${esc(org.public_id)}" target="_blank" rel="noopener">jwt-vc-issuer</a> · <a href="/.well-known/openid-credential-issuer/issuers/${esc(org.public_id)}" target="_blank" rel="noopener">openid-credential-issuer</a></p>
     <div class="actions"><button data-rotate>Rotar clave (la actual pasa a retirada)</button></div>`;
   app.appendChild(c);
@@ -673,9 +740,45 @@ views.usage = async () => {
 // ---------------------------------------------------------------------------
 // Sesión y enrutado
 // ---------------------------------------------------------------------------
+views.help = async (root = app) => {
+  const anchor = location.hash.split("/")[2];
+  root.innerHTML = `<h1>Ayuda</h1>
+    <div class="help-layout">
+      <nav class="help-toc" aria-label="Contenido">
+        <div class="filter"><input type="search" placeholder="Buscar en la ayuda" data-help-search aria-label="Buscar en la ayuda"></div>
+        ${DOCS.map((d) => `<a href="#/help/${d.id}" data-toc="${d.id}">${esc(d.title)}</a>`).join("")}
+        <a href="/docs" target="_blank" rel="noopener">Referencia de la API ↗</a>
+      </nav>
+      <div class="help-body">
+        ${DOCS.map((d) => `<section class="card help-doc" id="help-${d.id}" data-doc="${d.id}"><h2>${esc(d.title)}</h2>${d.body}</section>`).join("")}
+        <p class="empty" data-help-empty hidden>Sin resultados. Pruebe con otras palabras o consulte la <a href="/docs" target="_blank" rel="noopener">referencia de la API</a>.</p>
+      </div>
+    </div>`;
+  const search = root.querySelector("[data-help-search]");
+  search.addEventListener("input", () => {
+    const term = search.value.trim().toLowerCase();
+    let shown = 0;
+    root.querySelectorAll("[data-doc]").forEach((el) => {
+      const hit = !term || el.textContent.toLowerCase().includes(term);
+      el.hidden = !hit;
+      root.querySelector(`[data-toc="${el.dataset.doc}"]`).hidden = !hit;
+      if (hit) shown++;
+      // Abre las preguntas frecuentes que coinciden con la búsqueda.
+      el.querySelectorAll("details.faq").forEach((d) => (d.open = Boolean(term) && d.textContent.toLowerCase().includes(term)));
+    });
+    root.querySelector("[data-help-empty]").hidden = shown > 0;
+  });
+  if (anchor) {
+    const target = document.getElementById(`help-${anchor}`);
+    target?.scrollIntoView({ block: "start" });
+    root.querySelector(`[data-toc="${anchor}"]`)?.classList.add("active");
+  }
+};
+
 const TITLES = {
   overview: "Resumen", credentials: "Credenciales", templates: "Plantillas", verify: "Verificación",
   members: "Miembros", "api-clients": "Claves de API", "signing-keys": "Claves de firma", audit: "Auditoría", usage: "Consumo",
+  help: "Ayuda",
 };
 
 async function loadMe() {
@@ -697,11 +800,23 @@ async function loadMe() {
 
 async function route() {
   const name = (location.hash.replace(/^#\//, "") || "overview").split("/")[0];
-  if (!me) { shell.hidden = true; auth.hidden = false; views.login(); return; }
+  if (!me) {
+    shell.hidden = true;
+    auth.hidden = false;
+    // La guía de uso es pública: se puede leer antes de iniciar sesión.
+    authCard.classList.toggle("wide", name === "help");
+    if (name === "help") {
+      await views.help(authCard);
+      authCard.insertAdjacentHTML("afterbegin", `<p><a href="#/login">← Volver a iniciar sesión</a></p>`);
+    } else {
+      views.login();
+    }
+    return;
+  }
   auth.hidden = true;
   shell.hidden = false;
   const key = views[name] && name !== "login" ? name : "overview";
-  nav.querySelectorAll("a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#/${key}`));
+  document.querySelectorAll(".nav a, .sidebar-footer a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#/${key}`));
   crumbs.innerHTML = `${esc(org?.name || "")} / <b>${esc(TITLES[key] || key)}</b>`;
   document.title = `${TITLES[key] || "Aletheia"} · Aletheia`;
   try { await views[key](); } catch (e) { app.innerHTML = `<div class="card">Error: ${esc(e.message)}</div>`; }
