@@ -179,8 +179,9 @@ export const DOCS = [
           del titular. Pulse <b>Crear oferta</b>.</li>
         <li><b>Entregue el QR y el código de 6 dígitos por canales distintos.</b> El código se muestra una sola vez; si
           lo pierde, use «Nuevo enlace».</li>
-        <li>El QR abre una página donde el titular elige: <b>Agregar a Apple Wallet</b> (un pase con QR verificable) o
-          <b>su wallet de credenciales</b> (OpenID4VCI, con divulgación selectiva). En ambos casos introduce el código.</li>
+        <li>El QR abre una página donde el titular elige: <b>Agregar a Apple Wallet</b> o <b>a Google Wallet</b> (un
+          pase con QR verificable) o <b>su wallet de credenciales</b> (OpenID4VCI, con divulgación selectiva). En todos
+          los casos introduce el código.</li>
         <li>Cuando el titular la recibe en su wallet, el estado pasa de <span class="tag offered">offered</span> a
           <span class="tag issued">issued</span>.</li>
       </ol>`,
@@ -305,11 +306,12 @@ export const DOCS = [
       <details class="faq"><summary>La verificación dice «indeterminate».</summary>
         <p>Aletheia no pudo comprobar algo necesario (normalmente el estado de revocación de un emisor externo). Reintente
           en unos minutos; si persiste, contacte al emisor.</p></details>
-      <details class="faq"><summary>¿Qué diferencia hay entre Apple Wallet y una wallet de credenciales?</summary>
-        <p>El pase de <b>Apple Wallet</b> muestra todos los datos del certificado y un QR: quien lo escanea comprueba en
+      <details class="faq"><summary>¿Qué diferencia hay entre Apple o Google Wallet y una wallet de credenciales?</summary>
+        <p>El pase de <b>Apple Wallet</b> o <b>Google Wallet</b> muestra todos los datos del certificado y un QR: quien lo escanea comprueba en
           vivo la firma del emisor y si sigue vigente. Es cómodo, pero cualquiera que vea el QR ve los datos y no prueba
           que quien lo muestra sea el titular. Una <b>wallet de credenciales</b> (OpenID4VCI) guarda la credencial ligada
-          a una clave del teléfono: el titular elige qué datos mostrar y demuestra que es suya.</p></details>
+          a una clave del teléfono: el titular elige qué datos mostrar y demuestra que es suya. El pase de Google Wallet,
+          además, se guarda en los servidores de Google.</p></details>
       <details class="faq"><summary>¿Qué datos personales guarda Aletheia?</summary>
         <p>Los datos de la credencial sólo mientras la oferta está pendiente (cifrados, máximo 7 días) y los datos
           mostrados en una verificación durante 10 minutos (cifrados). El historial guarda resultados y fechas, no datos

@@ -102,6 +102,23 @@ variable "alarm_email" {
   default     = ""
 }
 
+variable "google_wallet_issuer_id" {
+  description = "Issuer ID de la consola de Google Pay & Wallet. Vacio: sin entrega por Google Wallet (ADR-0017)."
+  type        = string
+  default     = ""
+}
+
+variable "google_wallet_secret_arn" {
+  description = "Secreto de Secrets Manager con el JSON de la clave de la cuenta de servicio de Google Wallet (ADR-0017)."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = (var.google_wallet_issuer_id == "") == (var.google_wallet_secret_arn == "")
+    error_message = "google_wallet_issuer_id y google_wallet_secret_arn se definen juntos."
+  }
+}
+
 variable "verifier_identity_secret_arn" {
   description = <<-EOT
     Secreto de Secrets Manager (JSON con key_pem y cert_chain_pem) con la clave P-256 y el

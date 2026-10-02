@@ -19,6 +19,13 @@ locals {
     { name = "ALETHEIA_VERIFIER_CERT_CHAIN_PEM", valueFrom = "${var.verifier_identity_secret_arn}:cert_chain_pem::" },
   ]
 
+  google_wallet_env = var.google_wallet_issuer_id == "" ? [] : [
+    { name = "ALETHEIA_GOOGLE_WALLET_ISSUER_ID", value = var.google_wallet_issuer_id },
+  ]
+  google_wallet_secrets = var.google_wallet_secret_arn == "" ? [] : [
+    { name = "ALETHEIA_GOOGLE_WALLET_SERVICE_ACCOUNT", valueFrom = var.google_wallet_secret_arn },
+  ]
+
   container_hardening = {
     readonlyRootFilesystem = true
     user                   = "10001:10001"
@@ -87,7 +94,8 @@ resource "aws_iam_role_policy" "execution_secrets" {
           aws_secretsmanager_secret.app_db_password.arn,
           aws_secretsmanager_secret.tx_code_key.arn,
           aws_db_instance.main.master_user_secret[0].secret_arn,
-        ], var.verifier_identity_secret_arn == "" ? [] : [var.verifier_identity_secret_arn])
+          ], var.verifier_identity_secret_arn == "" ? [] : [var.verifier_identity_secret_arn],
+        var.google_wallet_secret_arn == "" ? [] : [var.google_wallet_secret_arn])
       },
       { Effect = "Allow", Action = ["kms:Decrypt"], Resource = [aws_kms_key.storage.arn] },
     ]
@@ -183,11 +191,12 @@ resource "aws_ecs_task_definition" "api" {
     essential    = true
     command      = ["api"]
     portMappings = [{ containerPort = 8000, protocol = "tcp" }]
-    environment  = concat(local.common_env, [{ name = "ALETHEIA_DATABASE_URL", value = local.app_dsn }])
+    environment = concat(local.common_env, local.google_wallet_env,
+    [{ name = "ALETHEIA_DATABASE_URL", value = local.app_dsn }])
     secrets = concat([
       { name = "ALETHEIA_DATABASE_PASSWORD", valueFrom = aws_secretsmanager_secret.app_db_password.arn },
       { name = "ALETHEIA_TX_CODE_KEY", valueFrom = aws_secretsmanager_secret.tx_code_key.arn },
-    ], local.verifier_secrets)
+    ], local.verifier_secrets, local.google_wallet_secrets)
     healthCheck = {
       command     = ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0 if u.urlopen('http://127.0.0.1:8000/readyz', timeout=2).status == 200 else 1)"]
       interval    = 15

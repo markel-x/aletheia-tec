@@ -88,6 +88,13 @@ class Settings(BaseSettings):
     pass_wwdr_pem: str | None = None
     """Certificado intermedio Apple WWDR (G4) en PEM."""
 
+    google_wallet_issuer_id: str | None = None
+    """Issuer ID de la consola de Google Pay & Wallet. Con la cuenta de servicio habilita
+    la entrega como pase de Google Wallet (ADR-0017)."""
+
+    google_wallet_service_account: SecretStr | None = None
+    """JSON de la clave de la cuenta de servicio con acceso a la API de Google Wallet."""
+
     tx_code_key: SecretStr | None = None
     """Clave HMAC (≥ 32 bytes, base64url) de los ``tx_code``. Obligatoria en entornos
     desplegados (Secrets Manager); en desarrollo se genera en ``dev_keys_dir``."""

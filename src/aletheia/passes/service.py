@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -22,6 +23,7 @@ from ..vc.verifier import Check, Outcome, Result, TrustPolicy, verify_presentati
 from ..verification.resolvers import KeyResolver, StatusFetcher, hosted_org_public_id
 from ..verification.service import dev_http_origin
 from .builder import build_pkpass, pass_json
+from .google import GoogleWallet, generic_object
 from .signing import PassSigner
 
 MAX_TOKEN_BYTES = 8 * 1024
@@ -48,7 +50,11 @@ def _offer(session: Session, offer_id: bytes, *, lock: bool = False) -> models.I
 
 
 def claim_info(
-    session: Session, settings: Settings, offer_id: bytes, signer: PassSigner | None
+    session: Session,
+    settings: Settings,
+    offer_id: bytes,
+    signer: PassSigner | None,
+    google: GoogleWallet | None = None,
 ) -> dict[str, Any]:
     offer = _offer(session, offer_id)
     if offer.state != "offered" or offer.offer_expires_at <= datetime.now(UTC):
@@ -64,23 +70,32 @@ def claim_info(
         "offer_uri": issuance.credential_offer_uri(settings, offer_id),
         "apple_pass": signer is not None,
         "apple_pass_trusted": bool(signer and signer.trusted_by_apple),
+        "google_pass": google is not None,
         "attempts_left": max(0, settings.tx_code_max_attempts - offer.tx_code_attempts),
     }
 
 
-def redeem_for_pass(
+@dataclass(frozen=True)
+class _Redeemed:
+    serial: str
+    signed: issuance.SignedCredential
+    organization_name: str
+    issued_at: datetime
+    expires_at: datetime
+
+
+def _redeem(
     session: Session,
     settings: Settings,
     backend: SignerBackend,
     encryptor: DataEncryptor,
-    signer: PassSigner,
     *,
     offer_id: bytes,
     tx_code: str | None,
-    now: datetime | None = None,
-) -> tuple[bytes, str]:
-    """Canjea la oferta con su ``tx_code`` y devuelve ``(pkpass, número de serie)``."""
-    now = now or datetime.now(UTC)
+    delivery: str,
+    now: datetime,
+) -> _Redeemed:
+    """Canjea la oferta con su ``tx_code`` y firma la credencial sin vinculación al titular."""
     offer = _offer(session, offer_id, lock=True)
     issuance.check_offer_code(session, settings, offer, tx_code, now)
     already = session.scalar(
@@ -97,24 +112,94 @@ def redeem_for_pass(
         encryptor,
         issuance=offer,
         holder_jwk=None,
-        delivery="apple_pass",
+        delivery=delivery,
         now=now,
     )
-    profile = session.get(models.IssuerProfile, signed.organization.id)
     if offer.issued_at is None or offer.expires_at is None:  # sign_and_close los fija
         raise OidError("credential_request_denied", "issuance incomplete", 500)
+    profile = session.get(models.IssuerProfile, signed.organization.id)
+    return _Redeemed(
+        serial=offer.public_id,
+        signed=signed,
+        organization_name=profile.display_name if profile else signed.organization.name,
+        issued_at=offer.issued_at,
+        expires_at=offer.expires_at,
+    )
+
+
+def redeem_for_pass(
+    session: Session,
+    settings: Settings,
+    backend: SignerBackend,
+    encryptor: DataEncryptor,
+    signer: PassSigner,
+    *,
+    offer_id: bytes,
+    tx_code: str | None,
+    now: datetime | None = None,
+) -> tuple[bytes, str]:
+    """Canjea la oferta con su ``tx_code`` y devuelve ``(pkpass, número de serie)``."""
+    r = _redeem(
+        session,
+        settings,
+        backend,
+        encryptor,
+        offer_id=offer_id,
+        tx_code=tx_code,
+        delivery="apple_pass",
+        now=now or datetime.now(UTC),
+    )
     document = pass_json(
         pass_type_identifier=settings.pass_type_identifier,
         team_identifier=settings.pass_team_identifier,
-        serial_number=offer.public_id,
-        organization_name=profile.display_name if profile else signed.organization.name,
-        credential_name=signed.template.name,
-        claims=signed.claims,
-        issued_at=offer.issued_at,
-        expires_at=offer.expires_at,
-        verify_url=verify_url(settings, signed.serialized),
+        serial_number=r.serial,
+        organization_name=r.organization_name,
+        credential_name=r.signed.template.name,
+        claims=r.signed.claims,
+        issued_at=r.issued_at,
+        expires_at=r.expires_at,
+        verify_url=verify_url(settings, r.signed.serialized),
     )
-    return build_pkpass(document, signer), offer.public_id
+    return build_pkpass(document, signer), r.serial
+
+
+def redeem_for_google_pass(
+    session: Session,
+    settings: Settings,
+    backend: SignerBackend,
+    encryptor: DataEncryptor,
+    wallet: GoogleWallet,
+    *,
+    offer_id: bytes,
+    tx_code: str | None,
+    now: datetime | None = None,
+) -> str:
+    """Canjea la oferta, publica el pase en Google Wallet y devuelve el enlace para guardarlo.
+
+    La llamada a Google ocurre dentro de la transacción: si falla, la emisión no se confirma
+    y la oferta sigue disponible (el intento de código sí queda contado)."""
+    r = _redeem(
+        session,
+        settings,
+        backend,
+        encryptor,
+        offer_id=offer_id,
+        tx_code=tx_code,
+        delivery="google_pass",
+        now=now or datetime.now(UTC),
+    )
+    document = generic_object(
+        wallet,
+        serial_number=r.serial,
+        organization_name=r.organization_name,
+        credential_name=r.signed.template.name,
+        claims=r.signed.claims,
+        issued_at=r.issued_at,
+        expires_at=r.expires_at,
+        verify_url=verify_url(settings, r.signed.serialized),
+        logo_url=f"{settings.public_base}/wallet/logo.png",
+    )
+    return wallet.publish(document)
 
 
 # ---------------------------------------------------------------------------

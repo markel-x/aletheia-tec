@@ -11,8 +11,7 @@ pasan en CI; no se ha ejecutado `plan` ni `apply` contra una cuenta.
 ```bash
 # Estado remoto: bucket S3 tf-state-markel (us-west-2), una clave por entorno en env/<entorno>.s3.tfbackend.
 terraform init -backend-config=env/staging.s3.tfbackend
-terraform apply -var environment=staging -var domain_name=staging.aletheia.example \
-  -var route53_zone_id=<zona> -var alarm_email=ops@example.org
+terraform apply -var-file=env/staging.tfvars   # dominio, Google Wallet; ver env/
 ```
 
 1. Sin `route53_zone_id`, `apply` espera a que se creen a mano los registros de `acm_validation_records`

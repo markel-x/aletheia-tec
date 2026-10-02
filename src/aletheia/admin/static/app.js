@@ -357,7 +357,7 @@ views.credentials = async () => {
         items.map((c) => [
           `<span class="mono">${esc(c.public_id)}</span>`,
           tag(c.state),
-          c.state === "issued" || c.state === "revoked" ? (c.delivery === "apple_pass" ? "Apple Wallet" : "Wallet OID4VCI") : "—",
+          c.state === "issued" || c.state === "revoked" ? ({ apple_pass: "Apple Wallet", google_pass: "Google Wallet" }[c.delivery] || "Wallet OID4VCI") : "—",
           esc(c.holder_reference || "—"),
           `<span class="mono">${esc(c.vct.split("/types/")[1] || c.vct)}</span>`,
           fmt(c.created_at),
