@@ -27,7 +27,11 @@ resource "aws_iam_role" "deploy" {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           # Sólo el entorno de GitHub con el mismo nombre (protegido con revisores en producción).
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:environment:${var.environment}"
+          # Formato clásico y, si el repositorio usa sujetos inmutables, el que incluye los ids.
+          "token.actions.githubusercontent.com:sub" = compact([
+            "repo:${var.github_repository}:environment:${var.environment}",
+            var.github_oidc_subject_prefix == "" ? "" : "${var.github_oidc_subject_prefix}:environment:${var.environment}",
+          ])
         }
       }
     }]

@@ -117,6 +117,12 @@ variable "github_repository" {
   default     = "markel-x/aletheia-tec"
 }
 
+variable "github_oidc_subject_prefix" {
+  description = "Prefijo del claim sub con sujetos inmutables (repo:<owner>@<owner_id>/<repo>@<repo_id>); vacio si el repositorio usa el formato clasico. Ver GET /repos/{repo}/actions/oidc/customization/sub."
+  type        = string
+  default     = "repo:markel-x@189795038/aletheia-tec@1398694591"
+}
+
 variable "create_github_oidc_provider" {
   description = "Crear el proveedor OIDC de GitHub (sólo uno por cuenta)."
   type        = bool
