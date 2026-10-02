@@ -54,6 +54,8 @@ resource "aws_iam_role_policy" "deploy" {
         Resource = aws_ecr_repository.app.arn
       },
       { Effect = "Allow", Action = ["kms:GenerateDataKey", "kms:Decrypt"], Resource = aws_kms_key.storage.arn },
+      # Escaneo mejorado de ECR (Inspector): estado y hallazgos de la imagen publicada.
+      { Effect = "Allow", Action = ["inspector2:ListCoverage", "inspector2:ListFindings"], Resource = "*" },
       {
         Effect   = "Allow"
         Action   = ["ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition"]

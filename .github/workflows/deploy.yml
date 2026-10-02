@@ -67,10 +67,34 @@ jobs:
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       - name: Esperar el escaneo de ECR y bloquear si hay CRITICAL
+        # La etiqueta apunta a un índice OCI (imagen + atestaciones) que el escáner no analiza: se
+        # escanea el manifiesto linux/arm64. Con escaneo mejorado (Inspector) el estado final es
+        # ACTIVE, no COMPLETE, así que se consulta en bucle en lugar de usar `aws ecr wait`.
+        env:
+          REPO: ${{ vars.ECR_REPOSITORY }}
         run: |
-          aws ecr wait image-scan-complete --repository-name "${{ vars.ECR_REPOSITORY }}" --image-id imageTag="$IMAGE_TAG"
-          critical=$(aws ecr describe-image-scan-findings --repository-name "${{ vars.ECR_REPOSITORY }}" \
-            --image-id imageTag="$IMAGE_TAG" --query 'imageScanFindings.findingSeverityCounts.CRITICAL' --output text)
+          digest=$(aws ecr batch-get-image --repository-name "$REPO" --image-ids imageTag="$IMAGE_TAG" \
+              --accepted-media-types application/vnd.oci.image.index.v1+json \
+                application/vnd.docker.distribution.manifest.list.v2+json \
+              --query 'images[0].imageManifest' --output text \
+            | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest')
+          [ -n "$digest" ] || { echo "sin manifiesto linux/arm64 en $IMAGE_TAG"; exit 1; }
+          echo "manifiesto arm64: $digest"
+          for _ in $(seq 1 60); do
+            status=$(aws ecr describe-image-scan-findings --no-paginate --repository-name "$REPO" --image-id imageDigest="$digest" \
+              --query 'imageScanStatus.status' --output text 2>/dev/null || echo PENDING)
+            case "$status" in
+              COMPLETE|ACTIVE) break ;;
+              FAILED|UNSUPPORTED_IMAGE|SCAN_ELIGIBILITY_EXPIRED|FINDINGS_UNAVAILABLE) echo "escaneo: $status"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "escaneo: $status"
+          [ "$status" = "COMPLETE" ] || [ "$status" = "ACTIVE" ]
+          aws ecr describe-image-scan-findings --no-paginate --repository-name "$REPO" --image-id imageDigest="$digest" \
+            --query 'imageScanFindings.findingSeverityCounts' --output json
+          critical=$(aws ecr describe-image-scan-findings --no-paginate --repository-name "$REPO" --image-id imageDigest="$digest" \
+            --query 'imageScanFindings.findingSeverityCounts.CRITICAL' --output text)
           echo "CRITICAL: $critical"
           [ "$critical" = "None" ] || [ "$critical" = "0" ]
 
