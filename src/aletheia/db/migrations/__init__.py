@@ -22,7 +22,8 @@ logging.getLogger("alembic.runtime.plugins").setLevel(logging.WARNING)
 def alembic_config(database_url: str) -> Config:
     cfg = Config()
     cfg.set_main_option("script_location", str(SCRIPT_LOCATION))
-    cfg.set_main_option("sqlalchemy.url", database_url)
+    # configparser interpola "%": una contraseña codificada en la URL (%2A, %28…) lo rompe.
+    cfg.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
     cfg.set_main_option("file_template", "%%(rev)s_%%(slug)s")
     return cfg
 
