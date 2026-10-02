@@ -38,5 +38,6 @@ output "deploy_config" {
     PRIVATE_SUBNETS     = join(",", aws_subnet.private[*].id)
     APP_SECURITY_GROUP  = aws_security_group.app.id
     PUBLIC_BASE_URL     = local.public_base_url
+    SMOKE_BASE_URL      = var.https_enabled ? local.public_base_url : "http://${aws_lb.main.dns_name}"
   }
 }

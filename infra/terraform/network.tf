@@ -118,7 +118,7 @@ resource "aws_route_table_association" "private" {
 # --- Grupos de seguridad ------------------------------------------------------------
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb"
-  description = "ALB publico: HTTPS (y HTTP sólo para redirigir)"
+  description = "ALB publico: HTTPS (y HTTP solo para redirigir)"
   vpc_id      = aws_vpc.main.id
 }
 
@@ -187,7 +187,7 @@ resource "aws_vpc_security_group_egress_rule" "app_to_db" {
 
 resource "aws_security_group" "db" {
   name        = "${local.name}-db"
-  description = "RDS PostgreSQL: sólo desde las tareas"
+  description = "RDS PostgreSQL: solo desde las tareas"
   vpc_id      = aws_vpc.main.id
 }
 

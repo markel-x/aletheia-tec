@@ -9,12 +9,7 @@ pasan en CI; no se ha ejecutado `plan` ni `apply` contra una cuenta.
 ## Primer despliegue
 
 ```bash
-# Estado remoto: un bucket S3 existente (versionado, cifrado) por cuenta.
-cat > env/staging.s3.tfbackend <<'CFG'
-bucket = "<bucket-de-estado>"
-key    = "aletheia/staging.tfstate"
-region = "us-east-1"
-CFG
+# Estado remoto: bucket S3 tf-state-markel (us-west-2), una clave por entorno en env/<entorno>.s3.tfbackend.
 terraform init -backend-config=env/staging.s3.tfbackend
 terraform apply -var environment=staging -var domain_name=staging.aletheia.example \
   -var route53_zone_id=<zona> -var alarm_email=ops@example.org

@@ -3,7 +3,7 @@
 # Requisitos por entorno de GitHub (Settings → Environments → staging / production):
 #   variables: AWS_DEPLOY_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_CLUSTER, ECS_SERVICE,
 #              API_TASK_FAMILY, MIGRATE_TASK_FAMILY, MAINT_TASK_FAMILY, PRIVATE_SUBNETS,
-#              APP_SECURITY_GROUP, PUBLIC_BASE_URL   (salida "deploy_config" de Terraform)
+#              APP_SECURITY_GROUP, PUBLIC_BASE_URL, SMOKE_BASE_URL   (salida "deploy_config" de Terraform)
 #   production: revisores obligatorios.
 # Y una variable de REPOSITORIO DEPLOY_ENABLED=true: las variables de entorno no están disponibles
 # en el `if` del trabajo (se resuelven al empezar), así que no sirven para decidir si se ejecuta.
@@ -51,6 +51,12 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
       - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
+      # Imagen arm64 (Fargate Graviton) desde un runner x86: emulación QEMU y builder buildx
+      # (driver docker-container, necesario para --provenance/--sbom).
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
 
       - name: Construir y publicar la imagen (etiqueta inmutable = commit)
         env:
@@ -101,6 +107,9 @@ jobs:
           aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
 
       - name: Prueba de humo
+        # SMOKE_BASE_URL = PUBLIC_BASE_URL con HTTPS; la dirección HTTP del ALB mientras https_enabled = false.
+        env:
+          BASE: ${{ vars.SMOKE_BASE_URL || vars.PUBLIC_BASE_URL }}
         run: |
-          curl -fsS "${{ vars.PUBLIC_BASE_URL }}/healthz"
-          curl -fsS "${{ vars.PUBLIC_BASE_URL }}/readyz"
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 10 "$BASE/healthz"
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 10 "$BASE/readyz"

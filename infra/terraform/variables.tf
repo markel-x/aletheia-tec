@@ -19,6 +19,17 @@ variable "domain_name" {
   type        = string
 }
 
+variable "https_enabled" {
+  description = "Listener HTTPS con el certificado ACM validado. false: la API se sirve por HTTP en el ALB mientras el certificado espera la validacion DNS (solo transitorio, nunca en production)."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.https_enabled || var.environment != "production"
+    error_message = "production exige https_enabled = true."
+  }
+}
+
 variable "route53_zone_id" {
   description = "Zona Route 53 para el alias y la validación ACM. Vacío: los registros se crean a mano (ver outputs)."
   type        = string

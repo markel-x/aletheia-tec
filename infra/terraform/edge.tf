@@ -119,26 +119,33 @@ resource "aws_lb_target_group" "api" {
   }
 }
 
+# Con HTTPS: el puerto 80 sólo redirige. Sin HTTPS (https_enabled = false, transitorio mientras el
+# certificado espera su validación DNS): el puerto 80 sirve la API directamente.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
   default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    type             = var.https_enabled ? "redirect" : "forward"
+    target_group_arn = var.https_enabled ? null : aws_lb_target_group.api.arn
+    dynamic "redirect" {
+      for_each = var.https_enabled ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
     }
   }
 }
 
 resource "aws_lb_listener" "https" {
+  count             = var.https_enabled ? 1 : 0
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate_validation.api.certificate_arn
+  certificate_arn   = aws_acm_certificate_validation.api[0].certificate_arn
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
@@ -167,6 +174,7 @@ resource "aws_route53_record" "cert_validation" {
 
 # Sin zona: apply espera a que el registro de validación (output) se cree a mano.
 resource "aws_acm_certificate_validation" "api" {
+  count                   = var.https_enabled ? 1 : 0
   certificate_arn         = aws_acm_certificate.api.arn
   validation_record_fqdns = var.route53_zone_id == "" ? null : [for r in aws_route53_record.cert_validation : r.fqdn]
 }
