@@ -88,6 +88,8 @@ class Principal:
 
     @property
     def audit_actor(self) -> audit.Actor:
+        if self.actor_type == "system":
+            return audit.Actor.system()
         return audit.Actor(self.actor_type, self.actor_id)
 
 

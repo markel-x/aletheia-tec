@@ -45,6 +45,29 @@ def test_home_page_is_served(client: TestClient, clean_db: None) -> None:
     assert "CredoSeal" in r.text and 'href="/admin/"' in r.text and "hello@credoseal.com" in r.text
     assert client.get("/admin/static/landing.js").status_code == 200
     assert client.get("/admin/static/landing.css").status_code == 200
+    # Favicon: SVG, ICO en la raíz e ícono para la pantalla de inicio del iPhone.
+    assert 'rel="icon" href="/admin/static/favicon.svg"' in r.text
+    ico = client.get("/favicon.ico")
+    assert ico.status_code == 200 and ico.headers["content-type"] == "image/x-icon"
+    assert ico.content[:4] == b"\x00\x00\x01\x00"
+    assert client.get("/admin/static/favicon.svg").headers["content-type"] == "image/svg+xml"
+    assert client.get("/admin/static/apple-touch-icon.png").status_code == 200
+    # Vista previa al compartir: URLs absolutas con el origen público.
+    assert "__PUBLIC_BASE__" not in r.text
+    assert 'property="og:image" content="http://localhost:8000/admin/static/og-image.png"' in r.text
+    og = client.get("/admin/static/og-image.png")
+    assert og.status_code == 200 and og.content[:8] == b"\x89PNG\r\n\x1a\n"
+    # Capturas del panel y de la verificación, en ambos idiomas.
+    for name in (
+        "home-panel-overview",
+        "home-panel-offer",
+        "home-mobile-claim",
+        "home-mobile-verify",
+    ):
+        for lang in ("es", "en"):
+            img = client.get(f"/admin/static/{name}-{lang}.webp")
+            assert img.status_code == 200 and img.headers["content-type"] == "image/webp"
+            assert img.content[:4] == b"RIFF" and img.content[8:12] == b"WEBP"
 
 
 def test_access_request_is_stored(

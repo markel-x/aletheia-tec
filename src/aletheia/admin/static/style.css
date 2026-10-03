@@ -346,3 +346,14 @@ dl.facts dd { margin: 0; overflow-wrap: anywhere; }
   color-scheme: light;
 }
 :root[data-theme="light"] .qr img { box-shadow: 0 0 0 1px var(--line); }
+
+/* Botón oficial «Agregar a Google Wallet»: imagen de Google sin modificar, alto mínimo 48 px y
+   margen libre alrededor (pautas de marca). */
+.holder-card button.gw-button[type=submit] { display: flex; justify-content: center; width: 100%; margin-top: 14px; padding: 8px 0; background: none; border: 0; box-shadow: none; cursor: pointer; }
+.holder-card button.gw-button[type=submit]:hover { background: none; }
+.holder-card .gw-button img { height: 48px; width: auto; display: block; }
+.holder-card .gw-button:disabled { opacity: .6; cursor: default; }
+
+/* Acceso: la marca vuelve a la página de inicio */
+.auth-card a.brand { color: #1d252c; text-decoration: none; }
+.auth-card a.brand:hover { text-decoration: none; opacity: .85; }

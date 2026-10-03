@@ -22,6 +22,9 @@ locals {
   google_wallet_env = var.google_wallet_issuer_id == "" ? [] : [
     { name = "ALETHEIA_GOOGLE_WALLET_ISSUER_ID", value = var.google_wallet_issuer_id },
   ]
+  demo_env = var.demo_organization == "" ? [] : [
+    { name = "ALETHEIA_DEMO_ORGANIZATION", value = var.demo_organization },
+  ]
   site_auth_secrets = var.site_auth_secret_arn == "" ? [] : [
     { name = "ALETHEIA_SITE_BASIC_AUTH", valueFrom = var.site_auth_secret_arn },
   ]
@@ -195,7 +198,7 @@ resource "aws_ecs_task_definition" "api" {
     essential    = true
     command      = ["api"]
     portMappings = [{ containerPort = 8000, protocol = "tcp" }]
-    environment = concat(local.common_env, local.google_wallet_env,
+    environment = concat(local.common_env, local.google_wallet_env, local.demo_env,
     [{ name = "ALETHEIA_DATABASE_URL", value = local.app_dsn }])
     secrets = concat([
       { name = "ALETHEIA_DATABASE_PASSWORD", valueFrom = aws_secretsmanager_secret.app_db_password.arn },

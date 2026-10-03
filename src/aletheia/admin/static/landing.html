@@ -6,21 +6,39 @@
   <meta name="color-scheme" content="dark">
   <title>CredoSeal — Confianza que se puede verificar</title>
   <meta name="description" content="CredoSeal: emita credenciales digitales firmadas, entréguelas en cualquier wallet y verifíquelas en segundos. Confianza que se puede verificar." data-i18n-content="home.meta.description">
-  <meta property="og:title" content="CredoSeal">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CredoSeal">
+  <meta property="og:title" content="CredoSeal — Confianza que se puede verificar">
+  <meta property="og:url" content="__PUBLIC_BASE__/">
+  <meta property="og:image" content="__PUBLIC_BASE__/admin/static/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="CredoSeal: infraestructura de confianza para credenciales digitales">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
   <meta property="og:description" content="CredoSeal: emita credenciales digitales firmadas, entréguelas en cualquier wallet y verifíquelas en segundos. Confianza que se puede verificar." data-i18n-content="home.meta.description">
+  <link rel="icon" href="/admin/static/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/admin/static/apple-touch-icon.png">
   <link rel="stylesheet" href="/admin/static/landing.css">
 </head>
 <body class="landing">
   <header class="site-head">
     <div class="wrap head-row">
       <a class="logo" href="/"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>CredoSeal</span></a>
-      <nav class="site-nav" aria-label="Principal" data-i18n-aria-label="home.nav.aria">
+      <nav class="site-nav" id="site-nav" aria-label="Principal" data-i18n-aria-label="home.nav.aria">
         <a href="#how" data-i18n="home.nav.how">Cómo funciona</a>
+        <a href="#demo" class="nav-demo" data-i18n="home.nav.demo">Pruébelo</a>
         <a href="#uses" data-i18n="home.nav.uses">Casos de uso</a>
+        <a href="#security" data-i18n="home.nav.security">Seguridad</a>
+        <a href="#pricing" data-i18n="home.nav.pricing">Precios</a>
         <a href="#developers" data-i18n="home.nav.developers">Desarrolladores</a>
-        <a href="#contact" data-i18n="home.nav.contact">Contacto</a>
+        <a class="nav-login" href="/admin/" data-i18n="home.nav.login">Iniciar sesión</a>
       </nav>
+      <div class="head-lang"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span id="head-lang"></span></div>
       <div class="head-cta"><a class="btn ghost" href="/admin/" data-i18n="home.nav.login">Iniciar sesión</a><a class="btn primary" href="#start" data-i18n="home.cta.start">Empezar gratis</a></div>
+      <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Menú" data-i18n-aria-label="home.nav.menu"><span></span><span></span><span></span></button>
     </div>
   </header>
 
@@ -28,11 +46,11 @@
     <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <p class="kicker" data-i18n="home.hero.kicker">Infraestructura de confianza para credenciales digitales</p>
+          <p class="eyebrow"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="home.hero.kicker">Infraestructura de confianza para credenciales digitales</span></p>
           <h1 data-i18n="home.hero.title">Confianza que se puede verificar.</h1>
           <p class="lead" data-i18n="home.hero.lead">CredoSeal permite a cualquier organización emitir credenciales digitales firmadas, entregarlas en la wallet de cada persona y verificarlas en segundos: sin llamadas, sin papeles y sin exponer más datos de los necesarios.</p>
-          <div class="hero-cta"><a class="btn primary" href="#start" data-i18n="home.cta.start">Empezar gratis</a><a class="btn ghost" href="#how" data-i18n="home.hero.secondary">Ver cómo funciona</a></div>
-          <p class="hero-note" data-i18n="home.hero.note">Gratis durante el lanzamiento · Sin tarjeta de crédito</p>
+          <div class="hero-cta"><a class="btn primary" href="#start" data-i18n="home.cta.start">Empezar gratis</a><a class="btn ghost hero-demo" href="#demo" data-i18n="home.hero.try">Pruébelo en su teléfono</a></div>
+          <p class="hero-note" data-i18n="home.hero.note">Programa de fundadores · Gratis durante el lanzamiento · Sin tarjeta</p>
         </div>
         <div class="terminal" role="img" aria-label="Ejemplo de verificación" data-i18n-aria-label="home.term.aria"><div class="term-bar"><i></i><i></i><i></i><span data-i18n="home.term.title">verificación en vivo</span></div><pre><span class="c-dim">$</span> curl -s https://staging.credoseal.com/v1/verifications \
     -d @presentation.json
@@ -55,11 +73,35 @@
       </div>
     </section>
 
+    <section class="shot-band" aria-label="Panel" data-i18n-aria-label="home.shot.aria">
+      <div class="wrap"><figure class="shot"><img src="/admin/static/home-panel-overview-es.webp" data-i18n-src="home.img.overview" alt="Resumen del panel de CredoSeal: credenciales emitidas, pendientes y revocadas" data-i18n-alt="home.img.overview_alt" width="1600" height="878" loading="eager" decoding="async"></figure></div>
+    </section>
+
     <section class="band">
       <div class="wrap">
         <p class="kicker" data-i18n="home.problem.kicker">El problema</p>
         <h2 data-i18n="home.problem.title">Un documento no prueba nada si no se puede comprobar.</h2>
         <div class="grid3"><div class="card"><h3 data-i18n="home.problem.1.title">Fáciles de falsificar</h3><p data-i18n="home.problem.1.body">PDFs, fotos y papeles se editan en minutos, y quien los recibe no tiene cómo saberlo.</p></div><div class="card"><h3 data-i18n="home.problem.2.title">Verificar es lento</h3><p data-i18n="home.problem.2.body">Correos, llamadas y esperas para confirmar algo que debería ser instantáneo.</p></div><div class="card"><h3 data-i18n="home.problem.3.title">Se comparte de más</h3><p data-i18n="home.problem.3.body">Para probar un solo dato se entrega el documento entero, con todos los datos personales.</p></div></div>
+        <div class="compare" role="table" aria-label="PDF o papel frente a CredoSeal" data-i18n-aria-label="home.compare.aria">
+          <div class="cmp-row cmp-head" role="row"><span role="columnheader"></span><span role="columnheader" data-i18n="home.compare.old">PDF, papel o correo</span><span role="columnheader" class="cmp-us"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z"/><path d="m10.5 16.2 3.8 3.8 7.4-8"/></svg>CredoSeal</span></div>
+          <div class="cmp-row" role="row"><span role="rowheader" data-i18n="home.compare.forgery">Falsificación</span><span role="cell" class="cmp-bad" data-i18n="home.compare.forgery.old">Se edita en minutos y no se nota</span><span role="cell" class="cmp-good" data-i18n="home.compare.forgery.new">Firma criptográfica: cualquier cambio la invalida</span></div>
+          <div class="cmp-row" role="row"><span role="rowheader" data-i18n="home.compare.time">Verificar</span><span role="cell" class="cmp-bad" data-i18n="home.compare.time.old">Correos y llamadas; días de espera</span><span role="cell" class="cmp-good" data-i18n="home.compare.time.new">Escanear un QR; segundos, sin cuenta</span></div>
+          <div class="cmp-row" role="row"><span role="rowheader" data-i18n="home.compare.revoke">Anular</span><span role="cell" class="cmp-bad" data-i18n="home.compare.revoke.old">Las copias siguen circulando</span><span role="cell" class="cmp-good" data-i18n="home.compare.revoke.new">Revocación en vivo: deja de valer al momento</span></div>
+          <div class="cmp-row" role="row"><span role="rowheader" data-i18n="home.compare.privacy">Privacidad</span><span role="cell" class="cmp-bad" data-i18n="home.compare.privacy.old">Se entrega el documento entero</span><span role="cell" class="cmp-good" data-i18n="home.compare.privacy.new">Sólo los datos necesarios</span></div>
+          <div class="cmp-row" role="row"><span role="rowheader" data-i18n="home.compare.carry">Llevarla encima</span><span role="cell" class="cmp-bad" data-i18n="home.compare.carry.old">Un archivo perdido en el correo</span><span role="cell" class="cmp-good" data-i18n="home.compare.carry.new">En la wallet del teléfono</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="people">
+      <div class="wrap split media-right">
+        <div>
+          <p class="kicker" data-i18n="home.people.kicker">Para su equipo</p>
+          <h2 data-i18n="home.people.title">Hecha para personas. No hace falta programar.</h2>
+          <p class="section-lead" data-i18n="home.people.lead">Todo se hace desde un panel claro: defina sus credenciales con un formulario, emítalas y siga su estado desde el navegador. Si su equipo técnico quiere integrarlo con sus sistemas, también hay una API.</p>
+          <ul class="ticks"><li data-i18n="home.people.point.1">Plantillas con formularios, sin escribir código.</li><li data-i18n="home.people.point.2">Una oferta en dos clics: un enlace y un código para la persona.</li><li data-i18n="home.people.point.3">Revocar o reenviar con un botón.</li><li data-i18n="home.people.point.4">En español o inglés, con tema claro u oscuro.</li></ul>
+        </div>
+        <figure class="shot"><img src="/admin/static/home-panel-offer-es.webp" data-i18n-src="home.img.offer" alt="Formulario para emitir una membresía en el panel, sin código" data-i18n-alt="home.img.offer_alt" width="1600" height="1089" loading="lazy" decoding="async"></figure>
       </div>
     </section>
 
@@ -68,6 +110,83 @@
         <p class="kicker" data-i18n="home.how.kicker">Cómo funciona</p>
         <h2 data-i18n="home.how.title">Emitir, entregar, verificar.</h2>
         <ol class="steps"><li class="step"><span class="step-n">01</span><h3 data-i18n="home.how.1.title">Emita</h3><p data-i18n="home.how.1.body">Defina el tipo de credencial con un formulario y emita desde el panel o la API. Cada credencial va firmada con la clave de su organización.</p><code class="step-code">POST /v1/credentials</code></li><li class="step"><span class="step-n">02</span><h3 data-i18n="home.how.2.title">Entregue</h3><p data-i18n="home.how.2.body">La persona la recibe con un enlace y un código: en Apple Wallet, Google Wallet o una wallet de credenciales OpenID4VCI.</p><code class="step-code">openid-credential-offer://</code></li><li class="step"><span class="step-n">03</span><h3 data-i18n="home.how.3.title">Verifique</h3><p data-i18n="home.how.3.body">Cualquiera la comprueba al instante: firma, vigencia y revocación, mostrando sólo los datos necesarios.</p><code class="step-code">result: valid ✓</code></li></ol>
+      </div>
+    </section>
+
+    <section class="band demo" id="demo" hidden>
+      <div class="wrap split">
+        <div>
+          <p class="kicker" data-i18n="home.demo.kicker">Pruébelo ahora</p>
+          <h2 data-i18n="home.demo.title">Tenga una credencial en su teléfono en un minuto.</h2>
+          <p class="section-lead" data-i18n="home.demo.lead">Sin cuenta y sin hablar con nadie: emitimos una credencial de muestra a su nombre, la agrega a su wallet y la verifica usted mismo.</p>
+          <ol class="demo-steps">
+            <li data-i18n="home.demo.step.1">Escriba su nombre (opcional) y genere la credencial.</li>
+            <li data-i18n="home.demo.step.2">Escanee el QR con su teléfono, ingrese el código y agréguela a su wallet.</li>
+            <li data-i18n-html="home.demo.step.3">Abra el pase y escanee su QR con la cámara de otro teléfono (o en <a class="text-link" href="/v">Verificar</a>): verá que es auténtica.</li>
+          </ol>
+          <p class="demo-note" data-i18n="home.demo.note">Es una credencial de demostración, emitida por «CredoSeal Demo» y válida por 7 días.</p>
+        </div>
+        <div class="demo-card">
+          <form id="demo-form" class="demo-form" novalidate>
+            <label for="demo-name" data-i18n="home.demo.name">Su nombre (opcional)</label>
+            <div class="demo-row"><input id="demo-name" name="given_name" maxlength="40" autocomplete="given-name" placeholder="Ana" data-i18n-placeholder="home.demo.name_ph"><button class="btn primary" type="submit" data-i18n="home.demo.submit">Generar credencial</button></div>
+            <p class="form-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="demo-result" hidden>
+            <img class="demo-qr" alt="Código QR para recibir la credencial de muestra" data-i18n-alt="home.demo.qr_alt" width="200" height="200">
+            <div class="demo-info">
+              <p class="demo-label" data-i18n="home.demo.code">Código para recibirla</p>
+              <p class="demo-code" id="demo-code">——————</p>
+              <p class="muted" data-i18n="home.demo.scan">Escanee el QR con la cámara de su teléfono.</p>
+              <a class="btn ghost demo-open" id="demo-open" href="#" target="_blank" rel="noopener" data-i18n="home.demo.open">¿Ya está en el teléfono? Abrir aquí</a>
+            </div>
+          </div>
+          <div class="demo-placeholder" aria-hidden="true">
+            <div class="ph-pass"><span class="ph-logo"><svg viewBox="0 0 32 32"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z"/><path d="m10.5 16.2 3.8 3.8 7.4-8"/></svg>CredoSeal Demo</span><span class="ph-name" id="demo-preview-name">Ana</span><span class="ph-id">DEMO-······</span><span class="ph-qr"></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="wallets">
+      <div class="wrap split media-left">
+        <figure class="phone"><img src="/admin/static/home-mobile-claim-es.webp" data-i18n-src="home.img.claim" alt="Página donde la persona recibe su credencial y la agrega a Apple Wallet" data-i18n-alt="home.img.claim_alt" width="640" height="1386" loading="lazy" decoding="async"></figure>
+        <div>
+          <p class="kicker" data-i18n="home.wallets.kicker">Wallets</p>
+          <h2 data-i18n="home.wallets.title">Funciona con las wallets que ya usan.</h2>
+          <p class="section-lead" data-i18n="home.wallets.lead">Cada persona recibe su credencial donde le resulta más cómodo, con el mismo enlace y el mismo código.</p>
+          <div class="wallet-list">
+            <div class="wallet-item"><span class="wallet-badge"></span><div><h3 data-i18n="home.wallets.apple.title">Apple Wallet</h3><p data-i18n="home.wallets.apple.body">Un pase en el iPhone con un código QR que cualquiera puede verificar.</p></div></div>
+            <div class="wallet-item"><span class="wallet-badge"></span><div><h3 data-i18n="home.wallets.google.title">Google Wallet</h3><p data-i18n="home.wallets.google.body">El mismo pase verificable en teléfonos Android.</p></div></div>
+            <div class="wallet-item"><span class="wallet-badge"></span><div><h3 data-i18n="home.wallets.oid.title">Wallets de credenciales</h3><p data-i18n="home.wallets.oid.body">Compatibles con OpenID4VCI: la opción más privada, donde la persona elige qué datos mostrar.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="band open" id="open">
+      <div class="wrap">
+        <p class="kicker" data-i18n="home.open.kicker">Sin dependencia</p>
+        <h2 data-i18n="home.open.title">Estándares abiertos. Sin quedar atado.</h2>
+        <p class="section-lead" data-i18n="home.open.lead">Sus credenciales usan estándares internacionales abiertos, no un formato propietario. Funcionan con cualquier wallet y cualquier verificador compatibles, hoy y mañana.</p>
+        <div class="open-grid">
+          <div class="open-point"><span class="open-icon" aria-hidden="true">{ }</span><h3 data-i18n="home.open.1.title">Formatos abiertos</h3><p data-i18n="home.open.1.body">SD-JWT VC, OpenID4VCI y OpenID4VP: especificaciones públicas de IETF y la OpenID Foundation, no inventos nuestros.</p></div>
+          <div class="open-point"><span class="open-icon" aria-hidden="true">▢</span><h3 data-i18n="home.open.2.title">Cualquier wallet compatible</h3><p data-i18n="home.open.2.body">Además de Apple y Google Wallet, la persona puede guardar su credencial en la wallet compatible que prefiera.</p></div>
+          <div class="open-point"><span class="open-icon" aria-hidden="true">✓</span><h3 data-i18n="home.open.3.title">Cualquier verificador compatible</h3><p data-i18n="home.open.3.body">Quien verifica no necesita ser cliente de CredoSeal: cualquier software que implemente el estándar comprueba la firma y la revocación.</p></div>
+        </div>
+        <p class="open-fine" data-i18n="home.open.fine">Son los mismos estándares adoptados por la wallet de identidad digital de la Unión Europea.</p>
+      </div>
+    </section>
+
+    <section class="band" id="verify">
+      <div class="wrap split media-right">
+        <div>
+          <p class="kicker" data-i18n="home.verify.kicker">Verificación</p>
+          <h2 data-i18n="home.verify.title">Verificar es escanear un QR.</h2>
+          <p class="section-lead" data-i18n="home.verify.lead">Quien recibe la credencial la escanea con la cámara del teléfono y ve al instante si es auténtica, quién la emitió y si sigue vigente. Sin cuenta y sin instalar nada.</p>
+          <ul class="ticks"><li data-i18n="home.verify.point.1">Firma del emisor comprobada en cada lectura.</li><li data-i18n="home.verify.point.2">Revocación en vivo: una credencial anulada deja de valer al momento.</li><li data-i18n="home.verify.point.3">Sólo los datos que la credencial muestra; nada queda guardado.</li></ul>
+        </div>
+        <figure class="phone"><img src="/admin/static/home-mobile-verify-es.webp" data-i18n-src="home.img.verify" alt="Resultado de verificación: credencial válida, firmada por el emisor" data-i18n-alt="home.img.verify_alt" width="640" height="1386" loading="lazy" decoding="async"></figure>
       </div>
     </section>
 
@@ -97,7 +216,7 @@
       </div>
     </section>
 
-    <section class="band">
+    <section class="band" id="security">
       <div class="wrap">
         <p class="kicker" data-i18n="home.security.kicker">Seguridad</p>
         <h2 data-i18n="home.security.title">Seguridad desde el diseño.</h2>
@@ -105,18 +224,153 @@
       </div>
     </section>
 
+    <section class="band aws" id="aws">
+      <div class="wrap">
+        <div class="aws-head">
+          <div>
+            <p class="kicker" data-i18n="home.aws.kicker">Infraestructura</p>
+            <h2 data-i18n="home.aws.title">Construida sobre AWS.</h2>
+            <p class="section-lead" data-i18n="home.aws.lead">CredoSeal opera íntegramente sobre AWS, la misma infraestructura confiable y escalable que usa Amazon. La firma, los datos y la operación se apoyan en servicios gestionados con controles de seguridad auditados de forma independiente, no en servidores administrados a mano.</p>
+          </div>
+          <a class="aws-logo" href="https://aws.amazon.com/what-is-cloud-computing" rel="noopener" target="_blank"><img src="/admin/static/powered-by-aws-white.png" alt="Powered by AWS" data-i18n-alt="home.aws.logo_alt" width="200" height="72" loading="lazy"></a>
+        </div>
+        <div class="aws-grid"><div class="aws-point"><h3 data-i18n="home.aws.kms.title">Firma en hardware dedicado</h3><p data-i18n="home.aws.kms.body">Claves ECDSA P-256 no exportables, generadas y custodiadas en módulos de seguridad de hardware validados FIPS 140-3: la clave privada nunca sale del módulo. Se rotan sin invalidar las credenciales ya emitidas.</p></div><div class="aws-point"><h3 data-i18n="home.aws.rds.title">Datos cifrados y recuperables</h3><p data-i18n="home.aws.rds.body">Base de datos relacional gestionada, cifrada en reposo con claves propias y en tránsito con TLS; los datos pendientes de cada credencial llevan además cifrado de sobre por organización. Copias automáticas con recuperación a un punto en el tiempo.</p></div><div class="aws-point"><h3 data-i18n="home.aws.monitoring.title">Operación observada</h3><p data-i18n="home.aws.monitoring.body">Métricas y alarmas sobre errores, latencia p95 y salud de cada tarea; registros estructurados y despliegues que vuelven solos a la versión anterior si la nueva falla.</p></div></div>
+      </div>
+    </section>
+
+    <section class="band keys" id="keys">
+      <div class="wrap">
+        <p class="kicker" data-i18n="home.keys.kicker">Custodia de claves</p>
+        <h2 data-i18n="home.keys.title">Sus claves, sus reglas.</h2>
+        <p class="section-lead" data-i18n="home.keys.lead">La clave que firma sus credenciales es el corazón de la confianza. Elija quién la custodia: nosotros, con todo resuelto, o usted, dentro de su propia infraestructura.</p>
+        <div class="keys-grid">
+          <article class="key-card">
+            <div class="key-card-head">
+              <span class="pill ok" data-i18n="home.keys.a.badge">Incluido</span>
+              <h3 data-i18n="home.keys.a.title">Gestionada por CredoSeal</h3>
+            </div>
+            <svg class="diagram" viewBox="0 0 420 190" role="img" aria-label="Clave gestionada por CredoSeal" data-i18n-aria-label="home.keys.a.diagram">
+  <defs><marker id="arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" class="d-arrowhead"/></marker></defs>
+  <rect x="4" y="62" width="124" height="66" rx="10" class="d-box"/>
+  <text x="66" y="92" class="d-label" text-anchor="middle" data-i18n="home.keys.d.org">Su organización</text>
+  <text x="66" y="110" class="d-small" text-anchor="middle" data-i18n="home.keys.d.data">datos</text>
+  <rect x="150" y="20" width="140" height="150" rx="12" class="d-box d-accent"/>
+  <g class="d-logo" transform="translate(180 31) scale(0.5)"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z"/><path d="m10.5 16.2 3.8 3.8 7.4-8"/></g><text x="200" y="44" class="d-title" text-anchor="start" data-i18n="home.keys.d.credoseal">CredoSeal</text>
+  <rect x="158" y="60" width="124" height="72" rx="8" class="d-hsm"/>
+  <g transform="translate(200 86)"><g class="d-key"><circle cx="0" cy="0" r="7"/><path d="M5 4 L15 14 M11 10 L14 7 M13 12 L16 9"/></g></g>
+  <text x="228" y="90" class="d-label" text-anchor="start" data-i18n="home.keys.d.hsm">HSM</text>
+  <text x="220" y="117" class="d-small" text-anchor="middle" data-i18n="home.keys.d.keyhere">la clave vive aquí</text>
+  <text x="220" y="154" class="d-small" text-anchor="middle" data-i18n="home.keys.d.signs">firma</text>
+  <rect x="328" y="62" width="84" height="66" rx="10" class="d-box"/>
+  <text x="370" y="92" class="d-label" text-anchor="middle" data-i18n="home.keys.d.wallet">Wallet</text>
+  <text x="370" y="110" class="d-small" text-anchor="middle" data-i18n="home.keys.d.holder">del titular</text>
+  <path d="M128 95 H148" class="d-arrow" marker-end="url(#arA)"/>
+  <path d="M290 95 H326" class="d-arrow" marker-end="url(#arA)"/>
+</svg>
+            <p data-i18n="home.keys.a.body">Creamos y custodiamos una clave por organización en módulos de seguridad de hardware. Usted no gestiona infraestructura criptográfica: emite desde el primer día.</p>
+            <ul class="ticks"><li data-i18n="home.keys.a.point.1">Sin instalación ni equipo de seguridad propio.</li><li data-i18n="home.keys.a.point.2">Rotación y publicación de claves resueltas.</li><li data-i18n="home.keys.a.point.3">Ideal para instituciones, empresas y asociaciones que quieren empezar ya.</li></ul>
+          </article>
+          <article class="key-card enterprise">
+            <div class="key-card-head">
+              <span class="pill warm" data-i18n="home.keys.b.badge">Enterprise · a pedido</span>
+              <h3 data-i18n="home.keys.b.title">Su clave, su infraestructura</h3>
+            </div>
+            <svg class="diagram" viewBox="0 0 460 190" role="img" aria-label="Clave en su infraestructura" data-i18n-aria-label="home.keys.b.diagram">
+  <defs>
+    <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" class="d-arrowhead"/></marker>
+  </defs>
+  <rect x="8" y="20" width="150" height="150" rx="12" class="d-box d-warm"/>
+  <text x="83" y="44" class="d-title" text-anchor="middle" data-i18n="home.keys.d.yourinfra">Su infraestructura</text>
+  <rect x="16" y="60" width="134" height="72" rx="8" class="d-hsm d-hsm-warm"/>
+  <g transform="translate(62 86)"><g class="d-key"><circle cx="0" cy="0" r="7"/><path d="M5 4 L15 14 M11 10 L14 7 M13 12 L16 9"/></g></g>
+  <text x="90" y="90" class="d-label" text-anchor="start" data-i18n="home.keys.d.hsm2">HSM</text>
+  <text x="83" y="117" class="d-small" text-anchor="middle" data-i18n="home.keys.d.keystays">la clave no sale</text>
+  <text x="83" y="154" class="d-small" text-anchor="middle" data-i18n="home.keys.d.yourcloud">su nube u on-premise</text>
+  <rect x="246" y="62" width="110" height="66" rx="10" class="d-box d-accent"/>
+  <g class="d-logo" transform="translate(259 80) scale(0.45)"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z"/><path d="m10.5 16.2 3.8 3.8 7.4-8"/></g><text x="277" y="92" class="d-label" text-anchor="start" data-i18n="home.keys.d.credoseal2">CredoSeal</text>
+  <text x="301" y="110" class="d-small" text-anchor="middle" data-i18n="home.keys.d.orchestrates">orquesta</text>
+  <path d="M244 80 H160" class="d-arrow d-dashed" marker-end="url(#arB)"/>
+  <text x="202" y="72" class="d-tiny" text-anchor="middle" data-i18n="home.keys.d.hash">hash a firmar</text>
+  <path d="M160 110 H244" class="d-arrow d-dashed" marker-end="url(#arB)"/>
+  <text x="202" y="126" class="d-tiny" text-anchor="middle" data-i18n="home.keys.d.signature">firma</text>
+  <rect x="384" y="62" width="68" height="66" rx="10" class="d-box"/>
+  <text x="418" y="99" class="d-label" text-anchor="middle" data-i18n="home.keys.d.wallet2">Wallet</text>
+  <path d="M356 95 H382" class="d-arrow" marker-end="url(#arB)"/>
+</svg>
+            <p data-i18n="home.keys.b.body">La clave privada se queda en su HSM o en el servicio de claves de su propia nube. CredoSeal sólo le pide firmas y usted puede retirar ese permiso cuando quiera.</p>
+            <ul class="ticks"><li data-i18n="home.keys.b.point.1">Soberanía y cumplimiento: la clave nunca sale de su control.</li><li data-i18n="home.keys.b.point.2">Compatible con HSM on-premise y servicios de claves en la nube.</li><li data-i18n="home.keys.b.point.3">Pensado para gobiernos, bancos, salud y sectores regulados.</li></ul>
+            <div class="key-cta">
+              <a class="btn primary" href="mailto:hello@credoseal.com?subject=CredoSeal%20Enterprise%20%E2%80%94%20custodia%20de%20claves" data-i18n="home.keys.b.cta">Hablemos de su caso</a>
+              <a class="text-link" href="#start" data-i18n="home.keys.b.cta2">o solicite acceso</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band pricing" id="pricing">
+      <div class="wrap">
+        <p class="kicker" data-i18n="home.pricing.kicker">Planes</p>
+        <h2 data-i18n="home.pricing.title">Empiece gratis. Crezca cuando lo necesite.</h2>
+        <p class="section-lead" data-i18n="home.pricing.lead">Verificar es siempre gratis para quien verifica: sólo paga la organización que emite.</p>
+        <div class="plans">
+          <article class="plan featured">
+            <span class="pill ok" data-i18n="home.pricing.launch.badge">Disponible ahora</span>
+            <h3 data-i18n="home.pricing.launch.title">Lanzamiento</h3>
+            <p class="price"><strong data-i18n="home.pricing.launch.price">Gratis</strong> <span data-i18n="home.pricing.launch.unit">durante el lanzamiento</span></p>
+            <ul class="ticks"><li data-i18n="home.pricing.launch.1">Panel completo y API</li><li data-i18n="home.pricing.launch.2">Apple Wallet, Google Wallet y OpenID4VCI</li><li data-i18n="home.pricing.launch.3">Clave de firma gestionada en hardware</li><li data-i18n="home.pricing.launch.4">Revocación en vivo y verificación pública</li><li data-i18n="home.pricing.launch.5">Acompañamiento directo del equipo</li></ul>
+            <a class="btn primary" href="#start" data-i18n="home.pricing.launch.cta">Solicitar acceso</a>
+          </article>
+          <article class="plan">
+            <span class="pill" data-i18n="home.pricing.pro.badge">Próximamente</span>
+            <h3 data-i18n="home.pricing.pro.title">Profesional</h3>
+            <p class="price"><strong data-i18n="home.pricing.pro.price">Por uso</strong> <span data-i18n="home.pricing.pro.unit">según credenciales emitidas</span></p>
+            <ul class="ticks"><li data-i18n="home.pricing.pro.1">Todo lo de Lanzamiento</li><li data-i18n="home.pricing.pro.2">Alta inmediata con verificación del dominio</li><li data-i18n="home.pricing.pro.3">Mayor volumen de emisión</li><li data-i18n="home.pricing.pro.4">Soporte prioritario</li></ul>
+            <a class="btn ghost" href="#start" data-i18n="home.pricing.pro.cta">Reservar precio de fundador</a>
+          </article>
+          <article class="plan enterprise">
+            <span class="pill warm" data-i18n="home.pricing.ent.badge">A medida</span>
+            <h3 data-i18n="home.pricing.ent.title">Enterprise</h3>
+            <p class="price"><strong data-i18n="home.pricing.ent.price">Hablemos</strong> <span data-i18n="home.pricing.ent.unit">contrato anual</span></p>
+            <ul class="ticks"><li data-i18n="home.pricing.ent.1">Su clave en su propia infraestructura</li><li data-i18n="home.pricing.ent.2">Acuerdo de nivel de servicio (SLA)</li><li data-i18n="home.pricing.ent.3">Integración asistida con sus sistemas</li><li data-i18n="home.pricing.ent.4">Para gobiernos, banca, salud y sectores regulados</li></ul>
+            <a class="btn ghost" href="mailto:hello@credoseal.com?subject=CredoSeal%20Enterprise" data-i18n="home.pricing.ent.cta">Contactar a ventas</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band faq" id="faq">
+      <div class="wrap faq-grid">
+        <div>
+          <p class="kicker" data-i18n="home.faq.kicker">Preguntas frecuentes</p>
+          <h2 data-i18n="home.faq.title">Lo que suelen preguntarnos.</h2>
+          <p class="section-lead" data-i18n-html="home.faq.lead">¿Otra duda? Escríbanos a <a class="text-link" href="mailto:hello@credoseal.com">hello@credoseal.com</a>.</p>
+        </div>
+        <div class="faq-list">
+          <details><summary data-i18n="home.faq.1.q">¿La persona que recibe la credencial tiene que instalar algo?</summary><p data-i18n="home.faq.1.a">No. La agrega a Apple Wallet o Google Wallet, que ya vienen en su teléfono. Si prefiere más privacidad, puede usar cualquier wallet de credenciales compatible con OpenID4VCI.</p></details>
+          <details><summary data-i18n="home.faq.2.q">¿Quién puede verificar y cuánto le cuesta?</summary><p data-i18n="home.faq.2.a">Cualquiera, gratis y sin cuenta: escanea el QR con la cámara del teléfono y ve al instante si la credencial es auténtica, quién la emitió y si sigue vigente.</p></details>
+          <details><summary data-i18n="home.faq.3.q">¿Qué pasa si una credencial deja de ser válida?</summary><p data-i18n="home.faq.3.a">La revoca con un botón desde el panel (o la API). Desde ese momento, toda verificación la muestra como revocada, aunque la persona conserve el pase en su teléfono.</p></details>
+          <details><summary data-i18n="home.faq.4.q">¿Qué datos personales guardan?</summary><p data-i18n="home.faq.4.a">Los mínimos. Los datos de cada credencial se guardan cifrados sólo hasta que la persona la recibe y luego se borran; la credencial vive en su wallet. Al verificar no queda guardado el contenido.</p></details>
+          <details><summary data-i18n="home.faq.5.q">¿Necesito un equipo técnico?</summary><p data-i18n="home.faq.5.a">No. Todo se hace desde el panel con formularios. Si más adelante quiere emitir desde sus sistemas, la misma funcionalidad está en la API.</p></details>
+          <details><summary data-i18n="home.faq.6.q">¿Puedo usar mi propia clave de firma?</summary><p data-i18n="home.faq.6.a">Sí, en el plan Enterprise: la clave queda en su HSM o en el servicio de claves de su nube, y CredoSeal sólo le pide firmas.</p></details>
+          <details><summary data-i18n="home.faq.7.q">¿Cuánto tarda en tener acceso?</summary><p data-i18n="home.faq.7.a">Revisamos cada solicitud y respondemos en uno o dos días hábiles. Con el acceso, puede emitir su primera credencial el mismo día.</p></details>
+        </div>
+      </div>
+    </section>
+
     <section class="band start" id="start">
       <div class="wrap split">
         <div>
-          <p class="kicker" data-i18n="home.start.kicker">Empezar</p>
-          <h2 data-i18n="home.start.title">Empiece gratis.</h2>
-          <p class="section-lead" data-i18n="home.start.lead">Cuéntenos sobre su organización y le daremos acceso. Gratis durante el lanzamiento.</p>
+          <p class="kicker" data-i18n="home.start.kicker">Programa de fundadores</p>
+          <h2 data-i18n="home.start.title">Sea una de las organizaciones fundadoras.</h2>
+          <p class="section-lead" data-i18n="home.start.lead">Estamos sumando un grupo reducido de organizaciones para el lanzamiento. Cuéntenos sobre la suya.</p>
+          <ul class="ticks founders"><li data-i18n="home.founders.1">Gratis durante todo el lanzamiento.</li><li data-i18n="home.founders.2">Precio de fundador garantizado cuando lleguen los planes de pago.</li><li data-i18n="home.founders.3">Acompañamiento directo hasta emitir su primera credencial.</li><li data-i18n="home.founders.4">Voz en la hoja de ruta: lo que necesita, lo priorizamos.</li></ul>
           <div class="why">
             <h3 data-i18n="home.why.title">¿Por qué no es autoservicio todavía?</h3>
             <p data-i18n="home.why.body">Cada organización en CredoSeal es un emisor en el que otros van a confiar. Durante el lanzamiento revisamos cada solicitud antes de activarla, para que nadie pueda hacerse pasar por una institución. Respondemos en uno o dos días hábiles; pronto habrá alta inmediata con verificación del dominio.</p>
           </div>
         </div>
-        <form id="access-form" class="access-form" novalidate><label for="f-organization"><span data-i18n="home.form.organization">Organización</span></label><input id="f-organization" name="organization" required maxlength="200" autocomplete="organization" placeholder="Instituto Ejemplo" data-i18n-placeholder="home.form.organization_ph"><div class="two"><div><label for="f-contact_name"><span data-i18n="home.form.name">Su nombre</span></label><input id="f-contact_name" name="contact_name" required maxlength="200" autocomplete="name"></div><div><label for="f-email"><span data-i18n="home.form.email">Correo de trabajo</span></label><input id="f-email" name="email" type="email" required maxlength="320" autocomplete="email"></div></div><label for="f-website"><span data-i18n="home.form.website">Sitio web (opcional)</span></label><input id="f-website" name="website" maxlength="300" inputmode="url" placeholder="https://"><label for="f-use_case"><span data-i18n="home.form.use_case">¿Qué quiere certificar?</span></label><textarea id="f-use_case" name="use_case" required maxlength="2000" rows="3" placeholder="Por ejemplo: acreditaciones de socios para nuestro club." data-i18n-placeholder="home.form.use_case_ph"></textarea><div class="hp" aria-hidden="true"><label for="f-nickname">Nickname</label><input id="f-nickname" name="nickname" tabindex="-1" autocomplete="off"></div><button class="btn primary" type="submit" data-i18n="home.form.submit">Solicitar acceso</button><p class="form-status" role="status" aria-live="polite"></p></form>
+        <form id="access-form" class="access-form" novalidate><label for="f-organization"><span data-i18n="home.form.organization">Organización</span></label><input id="f-organization" name="organization" required maxlength="200" autocomplete="organization" placeholder="Instituto Ejemplo" data-i18n-placeholder="home.form.organization_ph"><div class="two"><div><label for="f-contact_name"><span data-i18n="home.form.name">Su nombre</span></label><input id="f-contact_name" name="contact_name" required maxlength="200" autocomplete="name"></div><div><label for="f-email"><span data-i18n="home.form.email">Correo de trabajo</span></label><input id="f-email" name="email" type="email" required maxlength="320" autocomplete="email"></div></div><label for="f-website"><span data-i18n="home.form.website">Sitio web (opcional)</span></label><input id="f-website" name="website" maxlength="300" inputmode="url" placeholder="https://"><label for="f-use_case"><span data-i18n="home.form.use_case">¿Qué quiere certificar?</span></label><textarea id="f-use_case" name="use_case" required maxlength="2000" rows="3" placeholder="Por ejemplo: acreditaciones de socios para nuestro club." data-i18n-placeholder="home.form.use_case_ph"></textarea><div class="hp" aria-hidden="true"><label for="f-nickname">Nickname</label><input id="f-nickname" name="nickname" tabindex="-1" autocomplete="off"></div><button class="btn primary" type="submit" data-i18n="home.form.submit">Solicitar acceso</button><p class="form-status" role="status" aria-live="polite"></p><p class="form-next" data-i18n-html="home.form.next">Le respondemos en uno o dos días hábiles. ¿Prefiere conversar? <a class="text-link" href="mailto:hello@credoseal.com?subject=Demo%20de%20CredoSeal">Pida una demo de 20 minutos</a>.</p></form>
       </div>
     </section>
   </main>
@@ -136,6 +390,7 @@
         <h4 data-i18n="home.foot.product">Producto</h4>
         <a href="/admin/" data-i18n="home.foot.login">Iniciar sesión</a>
         <a href="#start" data-i18n="home.foot.start">Solicitar acceso</a>
+        <a href="#pricing" data-i18n="home.nav.pricing">Precios</a>
         <a href="/v" data-i18n="home.foot.verify">Verificar una credencial</a>
       </div>
       <div>
@@ -146,6 +401,7 @@
     </div>
     <div class="wrap foot-bottom"><span>© 2026 CredoSeal</span><span id="holder-lang"></span></div>
   </footer>
+  <a class="sticky-cta btn primary" href="#start" data-i18n="home.cta.start">Empezar gratis</a>
   <script type="module" src="/admin/static/landing.js"></script>
 </body>
 </html>

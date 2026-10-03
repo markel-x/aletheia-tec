@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>API · CredoSeal</title>
+  <link rel="icon" href="/admin/static/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/admin/static/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+  <link rel="stylesheet" href="/admin/static/docs.css">
+</head>
+<body class="api-docs">
+  <header class="docs-head">
+    <div class="docs-wrap docs-head-row">
+      <a class="docs-logo" href="/">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>CredoSeal</span><em>API</em>
+      </a>
+      <nav class="docs-nav">
+        <a href="#reference" data-i18n="docs.nav.reference">Referencia</a>
+        <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+        <a href="/admin/#/help" data-i18n="docs.nav.guide">Guía de uso</a>
+        <a class="docs-btn" href="/admin/" data-i18n="docs.nav.panel">Ir al panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="docs-hero">
+    <div class="docs-wrap">
+      <p class="docs-eyebrow" data-i18n="docs.hero.eyebrow">Referencia de la API · v1</p>
+      <h1 data-i18n="docs.hero.title">Emita y verifique credenciales desde su código.</h1>
+      <p class="docs-lead" data-i18n="docs.hero.lead">Una API REST sobre estándares abiertos (SD-JWT VC, OpenID4VCI, OpenID4VP). Todo lo que hace el panel, también desde sus sistemas.</p>
+      <div class="docs-cards">
+        <div class="docs-card">
+          <h2 data-i18n="docs.card.base.title">URL base</h2>
+          <code class="docs-base" id="docs-base">https://…/v1</code>
+          <p data-i18n="docs.card.base.body">JSON en la entrada y la salida; errores con un código estable en error.code.</p>
+        </div>
+        <div class="docs-card">
+          <h2 data-i18n="docs.card.auth.title">Autenticación</h2>
+          <code>Authorization: Bearer ak_…</code>
+          <p data-i18n="docs.card.auth.body">Use una clave de API (Panel → Claves de API) con sólo los permisos que necesita. Pulse «Authorize» para probarla aquí.</p>
+        </div>
+        <div class="docs-card">
+          <h2 data-i18n="docs.card.idem.title">Reintentos seguros</h2>
+          <code>Idempotency-Key: &lt;uuid&gt;</code>
+          <p data-i18n="docs.card.idem.body">Al crear credenciales, repetir la misma petición con la misma clave no emite dos veces.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="docs-wrap" id="reference">
+    <div id="swagger-ui"></div>
+  </main>
+
+  <footer class="docs-foot">
+    <div class="docs-wrap docs-foot-row">
+      <span>© 2026 CredoSeal</span>
+      <span><a href="mailto:hello@credoseal.com">hello@credoseal.com</a> <span id="docs-lang"></span></span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script type="module" src="/admin/static/docs.js"></script>
+</body>
+</html>

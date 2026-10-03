@@ -244,6 +244,7 @@ def verify_pass_token(
     )
     profile = session.get(models.IssuerProfile, org.id) if org is not None else None
     credential_name = None
+    labels: dict[str, str] = {}
     vct = report.vct or ""
     if org is not None and "/types/" in vct:
         template = session.scalar(
@@ -252,6 +253,18 @@ def verify_pass_token(
             .where(models.CredentialTemplate.slug == vct.rsplit("/types/", 1)[1])
         )
         credential_name = template.name if template else None
+        if template is not None:
+            # Etiquetas («title») de la última versión publicada, para mostrar «Nº de socio» y no
+            # «member_id». Sólo nombres de campos de la plantilla: no son datos del titular.
+            version = session.scalar(
+                select(models.TemplateVersion)
+                .where(models.TemplateVersion.template_id == template.id)
+                .where(models.TemplateVersion.state == "published")
+                .order_by(models.TemplateVersion.version.desc())
+                .limit(1)
+            )
+            if version is not None:
+                labels = _schema_titles(version.claims_schema)
     claims = {k: v for k, v in (report.disclosed_claims or {}).items() if k not in _TECHNICAL}
     return {
         "result": report.result.value,
@@ -260,12 +273,25 @@ def verify_pass_token(
         "issuer": report.issuer,
         "issuer_name": (profile.display_name if profile else None),
         "credential_name": credential_name,
+        "labels": labels,
         "claims": claims if report.result is Result.VALID else None,
         "issued_at": payload.get("iat"),
         "expires_at": payload.get("exp"),
         "checked_at": int(time.time()),
         "language": org.default_language if org is not None else None,
     }
+
+
+def _schema_titles(node: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    titles: dict[str, str] = {}
+    for name, sub in (node.get("properties") or {}).items():
+        path = f"{prefix}{name}"
+        if isinstance(sub, dict):
+            if isinstance(sub.get("title"), str):
+                titles[path] = sub["title"]
+            if sub.get("type") == "object":
+                titles.update(_schema_titles(sub, f"{path}."))
+    return titles
 
 
 def _invalid(code: str, detail: str) -> dict[str, Any]:
@@ -276,6 +302,7 @@ def _invalid(code: str, detail: str) -> dict[str, Any]:
         "issuer": None,
         "issuer_name": None,
         "credential_name": None,
+        "labels": {},
         "claims": None,
         "issued_at": None,
         "expires_at": None,

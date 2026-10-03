@@ -75,3 +75,26 @@ def test_gate_is_off_by_default(settings_without_db: Settings) -> None:
     with TestClient(create_app(settings_without_db), raise_server_exceptions=False) as c:
         assert c.get("/").status_code == 200
         assert "x-robots-tag" not in {k.lower() for k in c.get("/").headers}
+
+
+def test_api_docs_page(settings_without_db: Settings) -> None:
+    with TestClient(create_app(settings_without_db), raise_server_exceptions=False) as c:
+        r = c.get("/docs")
+        assert r.status_code == 200 and 'id="swagger-ui"' in r.text and "docs.css" in r.text
+        csp = r.headers["content-security-policy"]
+        assert "script-src 'self' https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/" in csp
+        spec = c.get("/openapi.json").json()
+        assert spec["info"]["title"] == "CredoSeal"
+        assert [t["name"] for t in spec["tags"]][:2] == ["issuance", "verification"]
+    # En las demás páginas la CSP sigue sin orígenes externos.
+    with TestClient(create_app(settings_without_db), raise_server_exceptions=False) as c:
+        assert "jsdelivr" not in c.get("/").headers["content-security-policy"]
+
+
+def test_api_docs_hidden_in_production(settings_without_db: Settings) -> None:
+    from aletheia.platform.config import Environment
+
+    prod = settings_without_db.model_copy(update={"env": Environment.PRODUCTION})
+    with TestClient(create_app(prod), raise_server_exceptions=False) as c:
+        assert c.get("/docs").status_code == 404
+        assert c.get("/openapi.json").status_code == 404

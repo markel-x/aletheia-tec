@@ -1,7 +1,7 @@
 // Página del titular: recibir la credencial en Apple Wallet o Google Wallet (pases) o en una
 // wallet OpenID4VCI.
 
-import { applyLang, chosenLang, fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
+import { applyLang, chosenLang, fmtDateTime, lang, langSwitch, t, translateStatic } from "./i18n.js";
 
 // Textos fijos y selector, una vez decidido el idioma (el de la organización emisora, salvo
 // que el visitante haya elegido otro en este navegador).
@@ -62,7 +62,10 @@ async function main() {
       <p>${t("claim.google_intro")}</p>
       <form id="google-form">
         ${codeField("tx-google", info.attempts_left)}
-        <button type="submit" class="wallet-button">${t("claim.add_google")}</button>
+        <button type="submit" class="gw-button" aria-label="${t("claim.add_google")}">
+          <!-- Botón oficial de Google Wallet, sin modificar (pautas de marca de Google). -->
+          <img src="/admin/static/google-wallet-add-${lang === "en" ? "en" : "es"}.svg" alt="${t("claim.add_google")}" height="48">
+        </button>
       </form>
     </section>` : ""}
 

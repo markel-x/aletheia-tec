@@ -50,7 +50,8 @@ async function main() {
   const ok = r.result === "valid";
   const state = ok ? "valid" : r.result === "indeterminate" ? "indeterminate" : "invalid";
   const title = t(`verify.state.${state}`);
-  const rows = ok ? flatten(r.claims).map(([k, v]) => `<tr><th>${esc(label(k))}</th><td>${esc(v)}</td></tr>`).join("") : "";
+  // Etiqueta de la plantilla del emisor (p. ej. «Nº de socio»), si no la del catálogo.
+  const rows = ok ? flatten(r.claims).map(([k, v]) => `<tr><th>${esc((r.labels || {})[k] || label(k))}</th><td>${esc(v)}</td></tr>`).join("") : "";
   root.innerHTML = `
     <div class="verdict ${state}"><span class="verdict-icon" aria-hidden="true">${ok ? "✓" : state === "indeterminate" ? "?" : "✕"}</span>
       <div><h1>${esc(title)}</h1>

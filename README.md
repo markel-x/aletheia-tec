@@ -24,7 +24,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0017 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0018 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
@@ -41,7 +41,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 ## Estructura
 
 ```
-src/aletheia/cli.py          CLI: `api`, `migrate`, `maintenance`, `bootstrap`, `demo`, `version`
+src/aletheia/cli.py          CLI: `api`, `migrate`, `maintenance`, `bootstrap`, `demo-setup`, `access-requests`, `demo`, `version`
 src/aletheia/api/            Aplicación FastAPI (fábrica, dependencias, `/healthz`, `/readyz`)
 src/aletheia/platform/       Configuración, sesión de BD, logging JSON, errores, request-id, ids, rate limit
 src/aletheia/authz/          Matriz de permisos, login/sesiones, claves de API, `/v1/auth`, `/v1/api-clients`

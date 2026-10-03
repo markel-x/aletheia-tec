@@ -25,7 +25,7 @@ from ..organizations.keys import build_backend
 from ..passes import router as passes_router
 from ..passes.google import load_google_wallet
 from ..passes.signing import load_pass_signer
-from ..platform.config import Settings, get_settings
+from ..platform.config import Environment, Settings, get_settings
 from ..platform.crypto import build_encryptor, tx_code_key
 from ..platform.db import Database
 from ..platform.errors import install_error_handlers
@@ -40,6 +40,31 @@ from ..verification.identity import load_identity
 from . import operations
 
 log = logging.getLogger(__name__)
+
+
+# Secciones de la referencia de la API (/docs), en el orden en que se muestran.
+OPENAPI_TAGS = [
+    {"name": "issuance", "description": "Templates, credential offers, issuance and revocation."},
+    {
+        "name": "verification",
+        "description": "Trust policies, presentation requests and verifications.",
+    },
+    {
+        "name": "organizations",
+        "description": "Organization, issuer profile, members and signing keys.",
+    },
+    {"name": "auth", "description": "Sessions, your account and API keys."},
+    {"name": "usage", "description": "Monthly usage per organization."},
+    {
+        "name": "holder",
+        "description": "Pages and endpoints the credential holder uses to receive it.",
+    },
+    {
+        "name": "public",
+        "description": "Public metadata, status lists and verification of pass QR codes.",
+    },
+    {"name": "operations", "description": "Health checks."},
+]
 
 
 def create_app(settings: Settings | None = None, *, kms_client: Any | None = None) -> FastAPI:
@@ -77,10 +102,16 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         title="CredoSeal",
         version=__version__,
         lifespan=lifespan,
-        # La documentación interactiva sólo en entornos no desplegados.
-        docs_url=None if settings.env.is_deployed else "/docs",
+        description=(
+            "API de CredoSeal: emitir, administrar y verificar credenciales verificables "
+            "(SD-JWT VC, OpenID4VCI, OpenID4VP)."
+        ),
+        # La referencia (/docs, con estilo propio en admin/router.py) y el OpenAPI, salvo en
+        # producción; en staging los protege el acceso restringido del sitio.
+        docs_url=None,
         redoc_url=None,
-        openapi_url=None if settings.env.is_deployed else "/openapi.json",
+        openapi_url=None if settings.env is Environment.PRODUCTION else "/openapi.json",
+        openapi_tags=OPENAPI_TAGS,
     )
     app.add_middleware(RequestContextMiddleware)
     if settings.site_basic_auth is not None:

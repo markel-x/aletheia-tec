@@ -108,6 +108,12 @@ variable "site_auth_secret_arn" {
   default     = ""
 }
 
+variable "demo_organization" {
+  description = "public_id (org_…) de la organización de demostración para «Pruébelo ahora» en la página de inicio. Vacío: sin demo."
+  type        = string
+  default     = ""
+}
+
 variable "google_wallet_issuer_id" {
   description = "Issuer ID de la consola de Google Pay & Wallet. Vacio: sin entrega por Google Wallet (ADR-0017)."
   type        = string

@@ -99,6 +99,17 @@ class Settings(BaseSettings):
     google_wallet_service_account: SecretStr | None = None
     """JSON de la clave de la cuenta de servicio con acceso a la API de Google Wallet."""
 
+    demo_organization: str | None = None
+    """``public_id`` de la organización de demostración. Si está definida, la página de inicio
+    ofrece «Pruébelo ahora»: cualquiera obtiene una credencial de muestra de esa organización
+    (con límites por red y diarios). Ver access/demo.py."""
+
+    demo_template: str = "demo"
+    """Plantilla publicada de la organización de demostración; su esquema acepta
+    ``given_name`` y ``member_id`` (texto)."""
+
+    demo_daily_limit: int = Field(default=300, ge=1, le=10_000)
+
     tx_code_key: SecretStr | None = None
     """Clave HMAC (≥ 32 bytes, base64url) de los ``tx_code``. Obligatoria en entornos
     desplegados (Secrets Manager); en desarrollo se genera en ``dev_keys_dir``."""

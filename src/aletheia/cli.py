@@ -190,6 +190,8 @@ def _run_service_command(args: argparse.Namespace) -> int:
         return 0
     if args.command == "bootstrap":
         return _bootstrap(args, settings)
+    if args.command == "demo-setup":
+        return _demo_setup(args, settings)
     if args.command == "access-requests":
         return _access_requests(args, settings)
 
@@ -243,6 +245,24 @@ def _access_requests(args: argparse.Namespace, settings: Any) -> int:
                 )
     finally:
         db.dispose()
+    return 0
+
+
+def _demo_setup(args: argparse.Namespace, settings: Any) -> int:
+    from .access.demo import setup_demo_template
+    from .platform.db import Database
+    from .platform.errors import AppError
+
+    db = Database(settings)
+    try:
+        with db.session(bypass_rls=True) as session:
+            template = setup_demo_template(session, args.organization, settings.demo_template)
+    except AppError as exc:
+        print(f"error: {exc.code}: {exc.message}", file=sys.stderr)
+        return 1
+    finally:
+        db.dispose()
+    print(json.dumps({"organization": args.organization, "template": template}))
     return 0
 
 
@@ -304,6 +324,11 @@ def main(argv: list[str] | None = None) -> int:
         default="ALETHEIA_BOOTSTRAP_PASSWORD",
         help="variable de entorno con la contraseña (nunca se pasa por argumento)",
     )
+    demo = sub.add_parser(
+        "demo-setup",
+        help="crea la plantilla de «Pruébelo ahora» en la organización de demostración",
+    )
+    demo.add_argument("--organization", required=True, help="public_id (org_…)")
     reqs = sub.add_parser(
         "access-requests", help="solicitudes de acceso de la página de inicio (listar o resolver)"
     )
@@ -316,7 +341,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "version":
         print(json.dumps({"version": __version__, "profile": PROFILE_ID}))
         return 0
-    if args.command in {"api", "migrate", "maintenance", "bootstrap", "access-requests"}:
+    if args.command in {
+        "api",
+        "migrate",
+        "maintenance",
+        "bootstrap",
+        "demo-setup",
+        "access-requests",
+    }:
         return _run_service_command(args)
 
     environment = os.environ.get("ALETHEIA_ENV", "production")

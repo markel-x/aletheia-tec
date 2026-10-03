@@ -70,3 +70,12 @@ Tarea única con el comando `bootstrap` y `ALETHEIA_BOOTSTRAP_PASSWORD` desde un
 aws ecs run-task ... --overrides '{"containerOverrides":[{"name":"migrate","command":["bootstrap","--name","…","--owner-email","…","--owner-name","…"]}]}'
 ```
 La contraseña se entrega al propietario por un canal seguro y se borra el secreto temporal.
+
+## «Pruébelo ahora» (credencial de muestra en la página de inicio)
+1. Crear la organización de demostración con `bootstrap` (por ejemplo «CredoSeal Demo»).
+2. Crear y publicar su plantilla: tarea única con `["demo-setup","--organization","org_…"]`
+   (idempotente; crea la plantilla `demo` con `given_name` y `member_id`).
+3. `demo_organization = "org_…"` en el `.tfvars` del entorno y `terraform apply`. Sin esa variable,
+   la sección queda oculta y `/public/demo-credential` responde 404.
+
+Límites: 5 por red (/24, /64) por hora y `ALETHEIA_DEMO_DAILY_LIMIT` (300) por día en total.
