@@ -116,6 +116,7 @@ class UserAccount(Base):
     password_hash: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(USER_STATUS, server_default=text("'active'"))
     language: Mapped[str | None] = mapped_column(Text)
+    theme: Mapped[str | None] = mapped_column(Text)
     last_login_at: Mapped[datetime | None]
     deleted_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = _created_at()

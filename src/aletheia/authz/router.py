@@ -43,6 +43,7 @@ class MeResponse(BaseModel):
     language: str | None = Field(
         default=None, description="Idioma elegido por el usuario; null = el de la organización"
     )
+    theme: str | None = Field(default=None, description="dark | light | system; null = dark")
 
 
 class ApiClientCreate(BaseModel):
@@ -109,6 +110,7 @@ def me(principal: PrincipalDep, session: SessionDep) -> MeResponse:
         email=user.email if user else None,
         display_name=user.display_name if user else None,
         language=user.language if user else None,
+        theme=user.theme if user else None,
     )
 
 

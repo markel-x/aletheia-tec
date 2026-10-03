@@ -9,6 +9,21 @@ let HELP = { DOCS: [], ERROR_TIPS: {}, FIELD_HELP: {}, SECTION_HELP: {} };
 const loadHelp = async () => { HELP = await import(lang === "en" ? "./help-en.js" : "./help.js"); };
 
 const TOKEN_KEY = "aletheia.session";
+
+// Tema del panel: «dark» (predeterminado), «light» o «system» (el del sistema operativo).
+// Se guarda en la cuenta; en este navegador se recuerda el último para no parpadear al cargar.
+const THEME_KEY = "aletheia.theme";
+const prefersLight = matchMedia("(prefers-color-scheme: light)");
+let themePref = "dark";
+function applyTheme(pref) {
+  themePref = ["light", "system"].includes(pref) ? pref : "dark";
+  const light = themePref === "light" || (themePref === "system" && prefersLight.matches);
+  document.documentElement.dataset.theme = light ? "light" : "dark";
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", light ? "light" : "dark");
+  try { localStorage.setItem(THEME_KEY, themePref); } catch { /* sólo para esta visita */ }
+}
+prefersLight.addEventListener("change", () => { if (themePref === "system") applyTheme("system"); });
+try { applyTheme(localStorage.getItem(THEME_KEY)); } catch { applyTheme("dark"); }
 const app = document.getElementById("app");
 const nav = document.getElementById("nav");
 const who = document.getElementById("who");
@@ -825,15 +840,24 @@ views.settings = async () => {
       { value: "", label: t("set.language_org_default", { language: langName(org.default_language) }) },
       ...Object.entries(LANGS).map(([value, label]) => ({ value, label })),
     ], after: `<p class="muted small">${t("set.language_hint")}</p>` },
+    { name: "theme", label: t("set.theme"), type: "select", options: [
+      { value: "dark", label: t("set.theme_dark") },
+      { value: "light", label: t("set.theme_light") },
+      { value: "system", label: t("set.theme_system") },
+    ], after: `<p class="muted small">${t("set.theme_hint")}</p>` },
   ], t("common.save"), async (d) => {
     const language = d.language || null;
-    await api("PATCH", "/v1/auth/me", { display_name: d.display_name, language });
+    await api("PATCH", "/v1/auth/me", { display_name: d.display_name, language, theme: d.theme });
+    applyTheme(d.theme); // inmediato, sin recargar
     rememberLang(language); // el acceso de este navegador también lo usa
     if ((language || org.default_language) !== lang) { location.reload(); return; }
     toast(t("set.saved"));
     await loadMe();
   }));
   account.querySelector("[name=language]").value = me.language || "";
+  account.querySelector("[name=theme]").value = me.theme || "dark";
+  // Vista previa al elegir; se guarda con «Guardar».
+  account.querySelector("[name=theme]").addEventListener("change", (ev) => applyTheme(ev.target.value));
   app.appendChild(account);
 
   // Contraseña
@@ -957,6 +981,7 @@ async function loadMe() {
     org = await api("GET", "/v1/organization");
     // Idioma: el de la cuenta, si no el elegido en este navegador, si no el de la organización.
     applyLang(me.language || chosenLang || org.default_language);
+    applyTheme(me.theme);
     who.innerHTML = `<strong title="${esc(me.email || "")}">${esc(me.display_name || org.name)}</strong>${esc(org.name)} · ${esc(me.role || me.actor_type)}<br><button class="secondary" id="logout" type="button">${t("shell.logout")}</button>`;
     topbarRight.innerHTML = `<span class="pill" title="${esc(org.public_id)}">${t("shell.organization", { name: esc(org.name) })}</span>`;
     document.getElementById("logout").onclick = async () => {

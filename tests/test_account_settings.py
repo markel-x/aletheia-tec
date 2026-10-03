@@ -48,7 +48,21 @@ def test_account_profile_and_language(client: TestClient, owner_token: str) -> N
         headers=_auth(owner_token),
     )
     assert r.status_code == 200, r.text
-    assert r.json() == {"email": OWNER_EMAIL, "display_name": "Ana Owner", "language": "en"}
+    assert r.json() == {
+        "email": OWNER_EMAIL,
+        "display_name": "Ana Owner",
+        "language": "en",
+        "theme": None,
+    }
+
+    # Tema del panel: sigue a la cuenta; null vuelve al oscuro.
+    r = client.patch("/v1/auth/me", json={"theme": "light"}, headers=_auth(owner_token))
+    assert r.json()["theme"] == "light" and r.json()["language"] == "en"
+    assert client.get("/v1/auth/me", headers=_auth(owner_token)).json()["theme"] == "light"
+    assert (
+        client.patch("/v1/auth/me", json={"theme": "pink"}, headers=_auth(owner_token)).status_code
+        == 422
+    )
 
     # Sólo se cambia lo enviado; language: null vuelve al de la organización.
     r = client.patch("/v1/auth/me", json={"language": None}, headers=_auth(owner_token))

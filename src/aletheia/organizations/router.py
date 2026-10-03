@@ -34,6 +34,7 @@ class OrganizationResponse(BaseModel):
 
 
 Language = Literal["es", "en"]
+Theme = Literal["dark", "light", "system"]
 
 
 class OrganizationUpdate(BaseModel):
@@ -46,12 +47,14 @@ class AccountUpdate(BaseModel):
     language: Language | None = Field(
         default=None, description="null = usar el idioma predeterminado de la organización"
     )
+    theme: Theme | None = Field(default=None, description="Tema del panel; null = oscuro")
 
 
 class AccountResponse(BaseModel):
     email: str
     display_name: str
     language: str | None
+    theme: str | None = None
 
 
 class PasswordChange(BaseModel):
@@ -198,7 +201,9 @@ def update_account(
     # Sólo los campos enviados: «language: null» vuelve al idioma de la organización.
     changes = body.model_dump(include=body.model_fields_set)
     user = service.update_account(session, principal, changes)
-    return AccountResponse(email=user.email, display_name=user.display_name, language=user.language)
+    return AccountResponse(
+        email=user.email, display_name=user.display_name, language=user.language, theme=user.theme
+    )
 
 
 @router.post("/auth/password", response_model=PasswordChanged, tags=["auth"])

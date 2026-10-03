@@ -1,4 +1,5 @@
-/* Aletheia — tema oscuro de consola de observabilidad.
+/* CredoSeal (proyecto Aletheia) — tema oscuro de consola; tema claro al final del archivo
+   (:root[data-theme="light"], elegido en Configuración).
    Sin fuentes ni recursos externos (CSP default-src 'self'). */
 :root {
   --bg: #0d1215;
@@ -26,6 +27,14 @@
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --sidebar-w: 212px;
+  /* Colores que cambian con el tema y no son de la paleta base. */
+  --btn-bg: #f2f5f7;
+  --btn-fg: #0d1215;
+  --btn-hover: #fff;
+  --topbar-bg: rgba(13, 18, 21, .92);
+  --placeholder: #5c6a73;
+  --shadow: 0 6px 24px rgba(0, 0, 0, .4);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -59,7 +68,7 @@ a:hover { text-decoration: underline; }
 .shell.collapsed .collapse { align-self: center; transform: scaleX(-1); }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.topbar { position: sticky; top: 0; z-index: 5; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 24px; background: rgba(13, 18, 21, .92); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.topbar { position: sticky; top: 0; z-index: 5; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 24px; background: var(--topbar-bg); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
 .crumbs { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crumbs b { color: var(--fg); font-weight: 600; }
 .topbar-right { display: flex; align-items: center; gap: .5rem; }
@@ -89,6 +98,7 @@ h2 { font-size: 14px; font-weight: 600; margin: 18px 0 10px; color: var(--fg); }
 .billboard .hint { color: var(--muted); font-size: 11px; margin-top: 2px; }
 .billboard.ok { background: var(--ok); } .billboard.warn { background: var(--warn); } .billboard.bad { background: var(--bad); }
 .billboard.ok .label, .billboard.warn .label, .billboard.bad .label, .billboard.ok .hint, .billboard.warn .hint, .billboard.bad .hint { color: rgba(255, 255, 255, .88); }
+.billboard.ok .value, .billboard.warn .value, .billboard.bad .value { color: #fff; }
 
 /* Gráficos */
 .chart { width: 100%; height: auto; max-height: 260px; display: block; }
@@ -105,12 +115,12 @@ h2 { font-size: 14px; font-weight: 600; margin: 18px 0 10px; color: var(--fg); }
 label { display: block; font-size: 12px; color: var(--fg-2); margin: 10px 0 4px; font-weight: 500; }
 input, select, textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 4px; font: inherit; color: var(--fg); background: var(--bg); outline: none; }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-input::placeholder, textarea::placeholder { color: #5c6a73; }
+input::placeholder, textarea::placeholder { color: var(--placeholder); }
 textarea { min-height: 7rem; font-family: var(--mono); font-size: 12px; }
 input.inline { width: auto; margin-right: 6px; accent-color: var(--accent); }
 .perm { display: inline-block; margin: 2px 16px 2px 0; font-weight: 400; color: var(--fg-2); }
-button { display: inline-flex; align-items: center; gap: .4rem; padding: 6px 12px; border: 1px solid #f2f5f7; background: #f2f5f7; color: #0d1215; border-radius: 4px; font: inherit; font-weight: 600; cursor: pointer; }
-button:hover { background: #fff; }
+button { display: inline-flex; align-items: center; gap: .4rem; padding: 6px 12px; border: 1px solid var(--btn-bg); background: var(--btn-bg); color: var(--btn-fg); border-radius: 4px; font: inherit; font-weight: 600; cursor: pointer; }
+button:hover { background: var(--btn-hover); }
 button.secondary { background: transparent; color: var(--fg); border-color: var(--line-strong); font-weight: 500; }
 button.secondary:hover { background: var(--surface-hover); }
 button.danger { background: transparent; color: var(--bad-fg); border-color: rgba(214, 58, 58, .55); font-weight: 500; }
@@ -147,7 +157,7 @@ pre { background: var(--bg); border: 1px solid var(--line); color: var(--fg-2); 
 .qr img { width: 224px; height: 224px; image-rendering: pixelated; background: #fff; padding: 6px; border-radius: 4px; }
 .empty { padding: 28px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: var(--radius); }
 
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface-2); color: var(--fg); border: 1px solid var(--line-strong); padding: 9px 14px; border-radius: var(--radius); max-width: 90vw; box-shadow: 0 6px 24px rgba(0, 0, 0, .4); z-index: 20; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface-2); color: var(--fg); border: 1px solid var(--line-strong); padding: 9px 14px; border-radius: var(--radius); max-width: 90vw; box-shadow: var(--shadow); z-index: 20; }
 .toast.error { border-color: rgba(214, 58, 58, .7); color: var(--bad-fg); }
 
 /* ---------------------------------------------------------------- Acceso */
@@ -291,8 +301,8 @@ select.lang-switch { width: auto; padding: 3px 8px; font-size: 12px; color: var(
 /* Encabezado de página con acciones (listados, alta, detalle). */
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
 .page-head h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.005em; }
-.content a.button-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 4px; border: 1px solid #f2f5f7; background: #f2f5f7; color: #0d1215; font-weight: 600; }
-.content a.button-link:hover { text-decoration: none; background: #fff; }
+.content a.button-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--btn-bg); background: var(--btn-bg); color: var(--btn-fg); font-weight: 600; }
+.content a.button-link:hover { text-decoration: none; background: var(--btn-hover); }
 .content a.button-link.secondary { background: transparent; color: var(--fg); border-color: var(--line-strong); font-weight: 500; }
 .content a.button-link.secondary:hover { background: var(--surface-hover); }
 .content a.button-link.small { padding: 3px 10px; font-size: 12px; }
@@ -302,3 +312,37 @@ select.lang-switch { width: auto; padding: 3px 8px; font-size: 12px; color: var(
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
 dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- Tema claro
+   Misma estructura; sólo cambia la paleta. Las páginas de acceso y del titular ya son claras. */
+:root[data-theme="light"] {
+  --bg: #f4f6f8;
+  --sidebar: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #eef2f5;
+  --surface-hover: #e6ebef;
+  --line: #e0e5e9;
+  --line-strong: #c9d1d8;
+  --fg: #1d252c;
+  --fg-2: #3d4a53;
+  --muted: #66727b;
+  --link: #0b6bcb;
+  --accent: #4f5bd5;
+  --accent-soft: rgba(79, 91, 213, .12);
+  --ok: #1f9d66;
+  --ok-fg: #137a4c;
+  --warn: #c86a0f;
+  --warn-fg: #9a5100;
+  --bad: #d63a3a;
+  --bad-fg: #b42318;
+  --chart: #13958a;
+  --chart-2: #4f5bd5;
+  --btn-bg: #1d252c;
+  --btn-fg: #ffffff;
+  --btn-hover: #0d1215;
+  --topbar-bg: rgba(244, 246, 248, .92);
+  --placeholder: #9aa5ad;
+  --shadow: 0 6px 24px rgba(29, 37, 44, .14);
+  color-scheme: light;
+}
+:root[data-theme="light"] .qr img { box-shadow: 0 0 0 1px var(--line); }

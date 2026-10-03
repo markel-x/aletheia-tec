@@ -402,15 +402,17 @@ def current_user(session: Session, principal: Principal) -> models.UserAccount:
 def update_account(
     session: Session, principal: Principal, changes: dict[str, Any]
 ) -> models.UserAccount:
-    """``display_name`` y ``language`` (``None`` = volver al idioma de la organización)."""
+    """``display_name``, ``language`` (``None`` = el de la organización) y ``theme``
+    (``None`` = oscuro)."""
     user = current_user(session, principal)
     applied = []
     if changes.get("display_name") is not None:
         user.display_name = changes["display_name"]
         applied.append("display_name")
-    if "language" in changes:
-        user.language = changes["language"]
-        applied.append("language")
+    for field in ("language", "theme"):
+        if field in changes:
+            setattr(user, field, changes[field])
+            applied.append(field)
     if applied:
         audit.record(
             session,

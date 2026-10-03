@@ -370,4 +370,9 @@ export const STRINGS = {
   "issuer.not_found_body": { es: "Esta dirección no corresponde a un emisor activo en CredoSeal.", en: "This address does not belong to an active issuer on CredoSeal." },
   "set.issuer_name_hint": { es: "Es el nombre que ven titulares y verificadores: en la página pública del emisor, en los pases y en las verificaciones.", en: "This is the name holders and verifiers see: on the issuer's public page, on passes and in verifications." },
   "set.org_name_hint": { es: "Nombre interno de la organización en el panel. Si coincide con el nombre visible del emisor, éste también cambia.", en: "The organization's internal name in the panel. If it matches the issuer display name, that one changes too." },
+  "set.theme": { es: "Tema", en: "Theme" },
+  "set.theme_dark": { es: "Oscuro (predeterminado)", en: "Dark (default)" },
+  "set.theme_light": { es: "Claro", en: "Light" },
+  "set.theme_system": { es: "Según el sistema", en: "Match system" },
+  "set.theme_hint": { es: "Se aplica al panel y se guarda en su cuenta. «Según el sistema» sigue el modo claro u oscuro de su dispositivo.", en: "Applies to the panel and is saved to your account. “Match system” follows your device's light or dark mode." },
 };
