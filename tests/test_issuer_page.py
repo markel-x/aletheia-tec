@@ -61,3 +61,24 @@ def test_unknown_or_disabled_issuer_is_not_found(
     assert client.get(f"/issuer-info/{org['public_id']}").status_code == 404
     # La página carga igual (es estática) y muestra «emisor no encontrado» en el cliente.
     assert client.get(f"/issuers/{org['public_id']}").status_code == 200
+
+
+def test_renaming_the_organization_updates_the_public_name(
+    client: TestClient, org: dict[str, Any], owner_token: str
+) -> None:
+    info = client.get(f"/issuer-info/{org['public_id']}")
+    assert info.headers["cache-control"] == "no-cache"
+    # Mismo nombre en organización y perfil (alta): el nombre visible sigue al renombrar.
+    client.patch("/v1/organization", json={"name": "Nuevo Nombre"}, headers=_auth(owner_token))
+    assert client.get(f"/issuer-info/{org['public_id']}").json()["name"] == "Nuevo Nombre"
+    profile = client.get("/v1/organization/issuer-profile", headers=_auth(owner_token)).json()
+    assert profile["display_name"] == "Nuevo Nombre"
+
+    # Con un nombre visible propio, renombrar la organización no lo pisa.
+    client.put(
+        "/v1/organization/issuer-profile",
+        json={"display_name": "Marca Pública"},
+        headers=_auth(owner_token),
+    )
+    client.patch("/v1/organization", json={"name": "Otro Nombre"}, headers=_auth(owner_token))
+    assert client.get(f"/issuer-info/{org['public_id']}").json()["name"] == "Marca Pública"

@@ -368,4 +368,6 @@ export const STRINGS = {
   "issuer.key": { es: "Clave", en: "Key" },
   "issuer.not_found_title": { es: "Emisor no encontrado", en: "Issuer not found" },
   "issuer.not_found_body": { es: "Esta dirección no corresponde a un emisor activo en CredoSeal.", en: "This address does not belong to an active issuer on CredoSeal." },
+  "set.issuer_name_hint": { es: "Es el nombre que ven titulares y verificadores: en la página pública del emisor, en los pases y en las verificaciones.", en: "This is the name holders and verifiers see: on the issuer's public page, on passes and in verifications." },
+  "set.org_name_hint": { es: "Nombre interno de la organización en el panel. Si coincide con el nombre visible del emisor, éste también cambia.", en: "The organization's internal name in the panel. If it matches the issuer display name, that one changes too." },
 };

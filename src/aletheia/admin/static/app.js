@@ -862,7 +862,8 @@ views.settings = async () => {
     </dl>`;
   if (manage) {
     orgCard.appendChild(form([
-      { name: "name", label: t("set.org_name"), required: true, value: org.name },
+      { name: "name", label: t("set.org_name"), required: true, value: org.name,
+        after: `<p class="muted small">${t("set.org_name_hint")}</p>` },
       { name: "default_language", label: t("set.default_language"), type: "select", options: Object.entries(LANGS).map(([value, label]) => ({ value, label })),
         after: `<p class="muted small">${t("set.default_language_hint")}</p>` },
     ], t("common.save"), async (d) => {
@@ -884,7 +885,8 @@ views.settings = async () => {
     issuer.innerHTML += `<p class="muted">${t("set.issuer_profile_intro")}</p>`;
     if (manage) {
       issuer.appendChild(form([
-        { name: "display_name", label: t("set.issuer_name"), required: true, value: profile.display_name },
+        { name: "display_name", label: t("set.issuer_name"), required: true, value: profile.display_name,
+          after: `<p class="muted small">${t("set.issuer_name_hint")}</p>` },
         { name: "default_credential_validity_days", label: t("set.default_validity"), type: "number", required: true, value: profile.default_credential_validity_days },
         { name: "offer_ttl_hours", label: t("set.offer_ttl"), type: "number", required: true, value: profile.offer_ttl_hours },
       ], t("common.save"), async (d) => {

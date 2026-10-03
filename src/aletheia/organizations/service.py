@@ -123,8 +123,16 @@ def update_organization(
 ) -> models.Organization:
     org = get_organization(session, principal)
     applied = sorted(k for k in ("name", "default_language") if changes.get(k) is not None)
-    for field in applied:
-        setattr(org, field, changes[field])
+    # Si el nombre visible del emisor era el mismo que el de la organización, lo sigue: así
+    # renombrar la organización cambia también lo que ven titulares y verificadores. Si ya
+    # tenía un nombre propio, se respeta.
+    profile = session.get(models.IssuerProfile, org.id)
+    if "name" in applied and profile is not None and profile.display_name == org.name:
+        profile.display_name = changes["name"]
+        applied.append("issuer_profile.display_name")
+    for field in ("name", "default_language"):
+        if field in applied:
+            setattr(org, field, changes[field])
     if applied:
         audit.record(
             session,

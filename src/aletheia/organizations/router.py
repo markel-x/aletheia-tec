@@ -367,7 +367,8 @@ def issuer_info(
     org_public_id: str, request: Request, response: Response, session: SystemSessionDep
 ) -> dict[str, Any]:
     info = service.public_issuer_info(session, _settings(request), org_public_id)
-    response.headers["Cache-Control"] = "public, max-age=300"
+    # Sin caché en el navegador: un cambio de nombre se ve en la siguiente visita.
+    response.headers["Cache-Control"] = "no-cache"
     return info
 
 
