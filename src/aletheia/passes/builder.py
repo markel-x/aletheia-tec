@@ -79,7 +79,7 @@ def pass_json(
         {
             "key": "how",
             "label": "Cómo verificar",
-            "value": "Escanee el código QR: abre la verificación de Aletheia, que comprueba "
+            "value": "Escanee el código QR: abre la verificación de CredoSeal, que comprueba "
             "la firma del emisor y si la credencial sigue vigente o fue revocada.",
         },
     ]

@@ -201,7 +201,7 @@ def generic_object(
         {
             "id": "how",
             "header": "Cómo verificar",
-            "body": "Escanee el código QR: abre la verificación de Aletheia, que comprueba la "
+            "body": "Escanee el código QR: abre la verificación de CredoSeal, que comprueba la "
             "firma del emisor y si la credencial sigue vigente o fue revocada.",
         },
     ]

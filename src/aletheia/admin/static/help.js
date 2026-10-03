@@ -5,7 +5,7 @@
 // Ayudas por campo (desplegable "Cómo completarlo" bajo cada campo)
 // ---------------------------------------------------------------------------
 export const FIELD_HELP = {
-  "login.email": `El correo con el que le dieron de alta en Aletheia. No distingue mayúsculas.`,
+  "login.email": `El correo con el que le dieron de alta en CredoSeal. No distingue mayúsculas.`,
   "login.password": `Al menos 12 caracteres. Si su cuenta fue creada por un administrador, use la contraseña
     temporal que le entregó. Tras 10 intentos fallidos en 15 minutos el acceso se bloquea temporalmente.`,
   "login.organization": `Sólo si su correo pertenece a más de una organización. Escriba el identificador público
@@ -24,7 +24,7 @@ export const FIELD_HELP = {
     <li>Números sin comillas: <code>40</code>.</li>
     <li>Fechas como texto <code>"AAAA-MM-DD"</code>: <code>"2026-09-30"</code>.</li>
     <li>Sí/no: <code>true</code> o <code>false</code>.</li></ul>
-    Aletheia guarda estos datos cifrados sólo hasta que el titular recibe la credencial; después los borra.`,
+    CredoSeal guarda estos datos cifrados sólo hasta que el titular recibe la credencial; después los borra.`,
 
   "template.slug": `Identificador corto y permanente de la plantilla: minúsculas, números y guiones; empieza con letra
     o número; hasta 63 caracteres. Forma parte del <b>tipo</b> de la credencial (<code>vct</code>) y no se puede
@@ -65,8 +65,8 @@ export const FIELD_HELP = {
   "policy.require_holder_binding": `Exige que quien presenta demuestre tener la clave del titular (firma KB-JWT).
     Déjelo activado salvo que tenga un motivo concreto: sin esto, una copia robada de la credencial pasaría.`,
   "policy.issuer": `La URL del emisor (<code>iss</code>) en la que confía esta política. Para emisores alojados en
-    Aletheia tiene la forma <code>${location.origin}/issuers/org_…</code>; la de su propia organización está en
-    <a href="#/signing-keys">Claves de firma</a>. Un emisor <b>no</b> es confiable por estar en Aletheia: hay
+    CredoSeal tiene la forma <code>${location.origin}/issuers/org_…</code>; la de su propia organización está en
+    <a href="#/signing-keys">Claves de firma</a>. Un emisor <b>no</b> es confiable por estar en CredoSeal: hay
     que agregarlo aquí.`,
 
   "oid4vp.trust_policy_id": `La política decide qué emisores y tipos de credencial se aceptan. Sólo se listan
@@ -74,12 +74,12 @@ export const FIELD_HELP = {
   "oid4vp.claims": `Qué datos pedir al titular. Rutas separadas por coma (anidadas con punto). Vacío pide los
     <b>claims requeridos</b> de la política. Pida sólo lo necesario: el titular verá la lista antes de aceptar.
     <br>Ejemplo: <code>family_name, course.grade</code>`,
-  "oid4vp.client_id_scheme": `Cómo se identifica Aletheia ante el wallet:
+  "oid4vp.client_id_scheme": `Cómo se identifica CredoSeal ante el wallet:
     <ul><li><b>x509_hash</b> (recomendado): solicitud firmada con el certificado del verificador; es lo que exigen
       los wallets alineados con HAIP/EUDI.</li>
     <li><b>x509_san_dns</b>: igual, identificando por el dominio del certificado. Requiere un dominio, no una IP.</li>
     <li><b>redirect_uri</b>: solicitud sin firmar; sólo para wallets o pruebas que lo admitan.</li></ul>`,
-  "oid4vp.encrypt_response": `El wallet cifra su respuesta para que sólo Aletheia pueda leerla (recomendado).
+  "oid4vp.encrypt_response": `El wallet cifra su respuesta para que sólo CredoSeal pueda leerla (recomendado).
     Desactívelo sólo para wallets que no admitan respuestas cifradas.`,
 
   "present.trust_policy_id": `La política con la que se evaluará la presentación. Al crear la solicitud recibirá un
@@ -90,7 +90,7 @@ export const FIELD_HELP = {
     <br>Si no creó una solicitud antes, el resultado será <code>indeterminate</code>: sin <code>nonce</code> no se
     puede descartar que sea una copia reutilizada.`,
 
-  "member.email": `Correo de la persona. Si ya tiene cuenta en Aletheia (por otra organización), se le añade este rol;
+  "member.email": `Correo de la persona. Si ya tiene cuenta en CredoSeal (por otra organización), se le añade este rol;
     si no, se crea la cuenta y verá una <b>contraseña temporal</b> que debe entregarle por un canal seguro.`,
   "member.display_name": `Nombre que verá el resto del equipo. Ejemplo: <code>Ana Pérez (Secretaría)</code>.`,
   "member.role": `Qué puede hacer la persona:
@@ -107,7 +107,7 @@ export const FIELD_HELP = {
 
 // Ayudas por sección (desplegable "¿Qué es esto?")
 export const SECTION_HELP = {
-  offer: `Una <b>oferta</b> prepara una credencial para un titular. Aletheia devuelve un <b>QR/enlace</b> y un
+  offer: `Una <b>oferta</b> prepara una credencial para un titular. CredoSeal devuelve un <b>QR/enlace</b> y un
     <b>código de 6 dígitos</b> (<code>tx_code</code>). Entréguelos por <b>canales distintos</b> (p. ej. el QR por
     correo y el código por SMS): así, quien intercepte uno solo no puede quedarse con la credencial. El titular
     escanea el QR con su wallet, introduce el código y la credencial queda en su teléfono.`,
@@ -122,7 +122,7 @@ export const SECTION_HELP = {
     al titular (o a su aplicación) y pegue aquí la presentación que le devuelva.`,
   members: `Personas con acceso al panel de su organización y su rol. Cada persona entra con su propio correo y
     contraseña; nunca comparta cuentas.`,
-  apiclients: `Claves para que <b>otros sistemas</b> (p. ej. su sistema académico) usen la API de Aletheia sin una
+  apiclients: `Claves para que <b>otros sistemas</b> (p. ej. su sistema académico) usen la API de CredoSeal sin una
     persona. Cada clave tiene sólo los permisos que marque. Revoque las que ya no use.`,
   signingkeys: `La clave con la que su organización firma las credenciales. <b>Rotarla</b> crea una nueva y la anterior
     sigue sirviendo para verificar lo ya emitido. <b>Declararla comprometida</b> (sólo owner) invalida todo lo firmado
@@ -169,7 +169,7 @@ export const DOCS = [
           curso sin mostrar su nota.</dd>
         <dt>Revocación</dt><dd>Anular una credencial emitida (p. ej. por error). Es definitiva; los verificadores lo ven
           en minutos.</dd>
-        <dt>vct</dt><dd>El identificador del tipo de credencial; Aletheia lo crea a partir de la plantilla.</dd>
+        <dt>vct</dt><dd>El identificador del tipo de credencial; CredoSeal lo crea a partir de la plantilla.</dd>
       </dl>`,
   },
   {
@@ -250,7 +250,7 @@ export const DOCS = [
         <li><code>superseded</code>: se reemplazó por otra.</li>
         <li><code>holder_request</code>: lo pidió el titular.</li>
         <li><code>policy_violation</code>, <code>key_compromise</code>, <code>other</code>.</li></ul>
-      <p>Es <b>irreversible</b>. Las verificaciones en Aletheia lo ven al instante; verificadores externos, en un máximo de
+      <p>Es <b>irreversible</b>. Las verificaciones en CredoSeal lo ven al instante; verificadores externos, en un máximo de
         5 minutos.</p>`,
   },
   {
@@ -304,14 +304,14 @@ export const DOCS = [
         <p>En <a href="#/credentials">Credenciales</a>, pulse «Nuevo enlace» en la oferta: genera QR y código nuevos e
           invalida los anteriores.</p></details>
       <details class="faq"><summary>El titular perdió el teléfono con la credencial.</summary>
-        <p>Aletheia no guarda una copia de la credencial (por privacidad). Revoque la anterior con motivo
+        <p>CredoSeal no guarda una copia de la credencial (por privacidad). Revoque la anterior con motivo
           <code>superseded</code> y emita una nueva.</p></details>
       <details class="faq"><summary>¿Puedo corregir un dato de una credencial emitida?</summary>
         <p>No: las credenciales firmadas no se modifican. Revoque la incorrecta (<code>issued_in_error</code>) y emita otra.</p></details>
       <details class="faq"><summary>¿Por qué no aparece mi plantilla al crear una oferta?</summary>
         <p>Sólo se listan plantillas con una versión <b>publicada</b>.</p></details>
       <details class="faq"><summary>La verificación dice «indeterminate».</summary>
-        <p>Aletheia no pudo comprobar algo necesario (normalmente el estado de revocación de un emisor externo). Reintente
+        <p>CredoSeal no pudo comprobar algo necesario (normalmente el estado de revocación de un emisor externo). Reintente
           en unos minutos; si persiste, contacte al emisor.</p></details>
       <details class="faq"><summary>¿Qué diferencia hay entre Apple o Google Wallet y una wallet de credenciales?</summary>
         <p>El pase de <b>Apple Wallet</b> o <b>Google Wallet</b> muestra todos los datos del certificado y un QR: quien lo escanea comprueba en
@@ -319,7 +319,7 @@ export const DOCS = [
           que quien lo muestra sea el titular. Una <b>wallet de credenciales</b> (OpenID4VCI) guarda la credencial ligada
           a una clave del teléfono: el titular elige qué datos mostrar y demuestra que es suya. El pase de Google Wallet,
           además, se guarda en los servidores de Google.</p></details>
-      <details class="faq"><summary>¿Qué datos personales guarda Aletheia?</summary>
+      <details class="faq"><summary>¿Qué datos personales guarda CredoSeal?</summary>
         <p>Los datos de la credencial sólo mientras la oferta está pendiente (cifrados, máximo 7 días) y los datos
           mostrados en una verificación durante 10 minutos (cifrados). El historial guarda resultados y fechas, no datos
           personales.</p></details>`,

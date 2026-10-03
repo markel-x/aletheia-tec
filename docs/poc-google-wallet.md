@@ -26,8 +26,8 @@ aws secretsmanager create-secret --name aletheia-staging/google-wallet \
 ```
 
 ```bash
-cd infra/terraform && terraform apply -var environment=staging -var domain_name=aletheia.soyuzlabs.com \
-  -var google_wallet_issuer_id=<issuer-id> -var google_wallet_secret_arn=<arn-del-secreto>
+cd infra/terraform && terraform apply -var-file=env/staging.tfvars
+# (con google_wallet_issuer_id y google_wallet_secret_arn definidos en env/staging.tfvars)
 ```
 
 El `apply` registra una revisión de la tarea `api` con las dos variables; el siguiente despliegue la usa.

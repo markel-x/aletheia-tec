@@ -278,7 +278,7 @@ def test_admin_panel_is_served_with_csp(client: TestClient) -> None:
     r = client.get("/admin/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
     assert r.headers["content-security-policy"].startswith("default-src 'self'")
-    assert "Aletheia" in r.text
+    assert "CredoSeal" in r.text
     assert client.get("/admin/static/app.js").status_code == 200
     help_js = client.get("/admin/static/help.js")
     assert help_js.status_code == 200 and "FIELD_HELP" in help_js.text

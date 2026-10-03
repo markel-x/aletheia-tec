@@ -225,7 +225,7 @@ const views = {};
 
 views.login = () => {
   authCard.innerHTML = `
-    <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>aletheia</span></div>
+    <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>CredoSeal</span></div>
     <h1>${t("login.title")}</h1>`;
   const f = form(
     [
@@ -999,7 +999,7 @@ async function route() {
   crumbs.innerHTML = sub
     ? `${esc(org?.name || "")} / <a href="#/${key}">${esc(t(TITLE_KEYS[key]))}</a> / <b>${esc(title)}</b>`
     : `${esc(org?.name || "")} / <b>${esc(title)}</b>`;
-  document.title = `${title} · Aletheia`;
+  document.title = `${title} · CredoSeal`;
   try { await views[key](sub); } catch (e) { app.innerHTML = `<div class="card">${t("common.error", { message: esc(e.message) })}</div>`; }
 }
 

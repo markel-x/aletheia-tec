@@ -5,7 +5,7 @@
 // Per-field help ("How to fill this in" disclosure under each field)
 // ---------------------------------------------------------------------------
 export const FIELD_HELP = {
-  "login.email": `The email address you were registered with in Aletheia. Not case-sensitive.`,
+  "login.email": `The email address you were registered with in CredoSeal. Not case-sensitive.`,
   "login.password": `At least 12 characters. If your account was created by an administrator, use the temporary
     password they gave you. After 10 failed attempts within 15 minutes, access is temporarily locked.`,
   "login.organization": `Only needed if your email belongs to more than one organization. Enter the public identifier
@@ -24,7 +24,7 @@ export const FIELD_HELP = {
     <li>Numbers without quotes: <code>40</code>.</li>
     <li>Dates as <code>"YYYY-MM-DD"</code> text: <code>"2026-09-30"</code>.</li>
     <li>Yes/no: <code>true</code> or <code>false</code>.</li></ul>
-    Aletheia stores this data encrypted only until the holder receives the credential; after that it is deleted.`,
+    CredoSeal stores this data encrypted only until the holder receives the credential; after that it is deleted.`,
 
   "template.slug": `Short, permanent template identifier: lowercase letters, numbers and hyphens; starts with a letter
     or number; up to 63 characters. It becomes part of the credential <b>type</b> (<code>vct</code>) and cannot be
@@ -65,8 +65,8 @@ export const FIELD_HELP = {
   "policy.require_holder_binding": `Requires the presenter to prove possession of the holder's key (KB-JWT signature).
     Leave it enabled unless you have a specific reason: without it, a stolen copy of the credential would pass.`,
   "policy.issuer": `The issuer URL (<code>iss</code>) this policy trusts. For issuers hosted on
-    Aletheia it has the form <code>${location.origin}/issuers/org_…</code>; your own organization's URL is in
-    <a href="#/signing-keys">Signing keys</a>. An issuer is <b>not</b> trusted just because it is on Aletheia: you
+    CredoSeal it has the form <code>${location.origin}/issuers/org_…</code>; your own organization's URL is in
+    <a href="#/signing-keys">Signing keys</a>. An issuer is <b>not</b> trusted just because it is on CredoSeal: you
     must add it here.`,
 
   "oid4vp.trust_policy_id": `The policy decides which issuers and credential types are accepted. Only policies
@@ -74,12 +74,12 @@ export const FIELD_HELP = {
   "oid4vp.claims": `Which data to request from the holder. Comma-separated paths (nested with a dot). Empty requests the
     policy's <b>required claims</b>. Request only what you need: the holder will see the list before accepting.
     <br>Example: <code>family_name, course.grade</code>`,
-  "oid4vp.client_id_scheme": `How Aletheia identifies itself to the wallet:
+  "oid4vp.client_id_scheme": `How CredoSeal identifies itself to the wallet:
     <ul><li><b>x509_hash</b> (recommended): request signed with the verifier's certificate; this is what
       HAIP/EUDI-aligned wallets require.</li>
     <li><b>x509_san_dns</b>: the same, identifying by the certificate's domain. Requires a domain, not an IP.</li>
     <li><b>redirect_uri</b>: unsigned request; only for wallets or tests that support it.</li></ul>`,
-  "oid4vp.encrypt_response": `The wallet encrypts its response so only Aletheia can read it (recommended).
+  "oid4vp.encrypt_response": `The wallet encrypts its response so only CredoSeal can read it (recommended).
     Disable it only for wallets that do not support encrypted responses.`,
 
   "present.trust_policy_id": `The policy the presentation will be evaluated against. When you create the request you
@@ -90,7 +90,7 @@ export const FIELD_HELP = {
     <br>If you did not create a request first, the result will be <code>indeterminate</code>: without a <code>nonce</code>
     it cannot be ruled out that this is a reused copy.`,
 
-  "member.email": `The person's email address. If they already have an Aletheia account (through another organization),
+  "member.email": `The person's email address. If they already have an CredoSeal account (through another organization),
     this role is added to it; otherwise the account is created and you will see a <b>temporary password</b> that you
     must give them through a secure channel.`,
   "member.display_name": `The name the rest of the team will see. Example: <code>Ana Pérez (Registrar's Office)</code>.`,
@@ -108,7 +108,7 @@ export const FIELD_HELP = {
 
 // Per-section help ("What is this?" disclosure)
 export const SECTION_HELP = {
-  offer: `An <b>offer</b> prepares a credential for a holder. Aletheia returns a <b>QR code/link</b> and a
+  offer: `An <b>offer</b> prepares a credential for a holder. CredoSeal returns a <b>QR code/link</b> and a
     <b>6-digit code</b> (<code>tx_code</code>). Deliver them through <b>separate channels</b> (e.g. the QR code by
     email and the code by SMS): that way, anyone who intercepts only one cannot claim the credential. The holder
     scans the QR code with their wallet, enters the code, and the credential is stored on their phone.`,
@@ -123,7 +123,7 @@ export const SECTION_HELP = {
     to the holder (or their application), and paste here the presentation they return.`,
   members: `People with access to your organization's panel, and their roles. Each person signs in with their own email
     and password; never share accounts.`,
-  apiclients: `Keys that let <b>other systems</b> (e.g. your academic system) use the Aletheia API without a
+  apiclients: `Keys that let <b>other systems</b> (e.g. your academic system) use the CredoSeal API without a
     person. Each key has only the permissions you select. Revoke the ones you no longer use.`,
   signingkeys: `The key your organization signs credentials with. <b>Rotating</b> it creates a new one, and the previous
     one remains usable for verifying what was already issued. <b>Declaring it compromised</b> (owner only) invalidates
@@ -170,7 +170,7 @@ export const DOCS = [
           course without showing their grade.</dd>
         <dt>Revocation</dt><dd>Cancelling an issued credential (e.g. because of an error). It is final; verifiers see it
           within minutes.</dd>
-        <dt>vct</dt><dd>The credential type identifier; Aletheia creates it from the template.</dd>
+        <dt>vct</dt><dd>The credential type identifier; CredoSeal creates it from the template.</dd>
       </dl>`,
   },
   {
@@ -251,7 +251,7 @@ export const DOCS = [
         <li><code>superseded</code>: it was replaced by another one.</li>
         <li><code>holder_request</code>: the holder requested it.</li>
         <li><code>policy_violation</code>, <code>key_compromise</code>, <code>other</code>.</li></ul>
-      <p>It is <b>irreversible</b>. Verifications in Aletheia see it immediately; external verifiers, within at most
+      <p>It is <b>irreversible</b>. Verifications in CredoSeal see it immediately; external verifiers, within at most
         5 minutes.</p>`,
   },
   {
@@ -305,14 +305,14 @@ export const DOCS = [
         <p>In <a href="#/credentials">Credentials</a>, click “New link” on the offer: it generates a new QR code and code and
           invalidates the previous ones.</p></details>
       <details class="faq"><summary>The holder lost the phone with the credential.</summary>
-        <p>Aletheia does not keep a copy of the credential (for privacy). Revoke the old one with reason
+        <p>CredoSeal does not keep a copy of the credential (for privacy). Revoke the old one with reason
           <code>superseded</code> and issue a new one.</p></details>
       <details class="faq"><summary>Can I correct a value in an issued credential?</summary>
         <p>No: signed credentials cannot be modified. Revoke the incorrect one (<code>issued_in_error</code>) and issue another.</p></details>
       <details class="faq"><summary>Why doesn't my template appear when creating an offer?</summary>
         <p>Only templates with a <b>published</b> version are listed.</p></details>
       <details class="faq"><summary>The verification says “indeterminate”.</summary>
-        <p>Aletheia could not check something it needed (usually the revocation status of an external issuer). Try again
+        <p>CredoSeal could not check something it needed (usually the revocation status of an external issuer). Try again
           in a few minutes; if it persists, contact the issuer.</p></details>
       <details class="faq"><summary>What is the difference between Apple or Google Wallet and a credential wallet?</summary>
         <p>The <b>Apple Wallet</b> or <b>Google Wallet</b> pass shows all the certificate data and a QR code: whoever scans it checks
@@ -320,7 +320,7 @@ export const DOCS = [
           that the person showing it is the holder. A <b>credential wallet</b> (OpenID4VCI) stores the credential bound
           to a key on the phone: the holder chooses which data to show and proves it belongs to them. The Google Wallet pass
           is also stored on Google's servers.</p></details>
-      <details class="faq"><summary>What personal data does Aletheia store?</summary>
+      <details class="faq"><summary>What personal data does CredoSeal store?</summary>
         <p>Credential data only while the offer is pending (encrypted, 7 days maximum), and data
           shown in a verification for 10 minutes (encrypted). The history stores results and dates, not personal
           data.</p></details>`,

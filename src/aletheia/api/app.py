@@ -72,7 +72,7 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
             log.info("api stopped")
 
     app = FastAPI(
-        title="Aletheia",
+        title="CredoSeal",
         version=__version__,
         lifespan=lifespan,
         # La documentación interactiva sólo en entornos no desplegados.
