@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from ..api.deps import PrincipalDep, SessionDep, SystemSessionDep, require
 from ..api.routing import TransactionalRoute
+from ..db import models
 from . import service
 from .permissions import API_CLIENT_PERMISSIONS, Permission
 
@@ -37,6 +38,11 @@ class MeResponse(BaseModel):
     organization_id: uuid.UUID
     role: str | None
     permissions: list[str]
+    email: str | None = Field(default=None, description="Sólo sesiones de usuario")
+    display_name: str | None = None
+    language: str | None = Field(
+        default=None, description="Idioma elegido por el usuario; null = el de la organización"
+    )
 
 
 class ApiClientCreate(BaseModel):
@@ -88,13 +94,21 @@ def logout(principal: PrincipalDep, session: SessionDep) -> None:
 
 
 @router.get("/auth/me", response_model=MeResponse)
-def me(principal: PrincipalDep) -> MeResponse:
+def me(principal: PrincipalDep, session: SessionDep) -> MeResponse:
+    user = (
+        session.get(models.UserAccount, principal.actor_id)
+        if principal.actor_type == "user"
+        else None
+    )
     return MeResponse(
         actor_type=principal.actor_type,
         actor_id=principal.actor_id,
         organization_id=principal.organization_id,
         role=principal.role,
         permissions=list(principal.permission_names),
+        email=user.email if user else None,
+        display_name=user.display_name if user else None,
+        language=user.language if user else None,
     )
 
 

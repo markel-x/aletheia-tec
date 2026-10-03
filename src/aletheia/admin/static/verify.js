@@ -1,11 +1,19 @@
 // Verificación del QR de un pase: el token llega en el fragmento (#…), que el navegador
 // no envía al servidor; se manda en el cuerpo de una petición POST y no queda en registros.
 
-import { claimLabel, fmtDate, fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
+import { applyLang, chosenLang, claimLabel, fmtDate, fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
 
-translateStatic();
-document.getElementById("holder-lang").appendChild(langSwitch());
-document.title = t("verify.page_title");
+// Textos fijos y selector, una vez decidido el idioma (el de la organización emisora, salvo
+// que el visitante haya elegido otro en este navegador).
+let chromeDone = false;
+function chrome(orgLanguage) {
+  if (chromeDone) return;
+  chromeDone = true;
+  if (!chosenLang) applyLang(orgLanguage);
+  translateStatic();
+  document.getElementById("holder-lang").appendChild(langSwitch());
+  document.title = t("verify.page_title");
+}
 
 const root = document.getElementById("verify");
 const esc = (v) =>
@@ -27,6 +35,7 @@ async function main() {
   // Se quita el token de la barra de direcciones y del historial.
   history.replaceState(null, "", location.pathname);
   if (!token) {
+    chrome();
     root.innerHTML = `<h1>${t("verify.empty_title")}</h1><p>${t("verify.empty_body")}</p>`;
     return;
   }
@@ -37,6 +46,7 @@ async function main() {
   });
   if (!res.ok) throw new Error(String(res.status));
   const r = await res.json();
+  chrome(r.language);
   const ok = r.result === "valid";
   const state = ok ? "valid" : r.result === "indeterminate" ? "indeterminate" : "invalid";
   const title = t(`verify.state.${state}`);
@@ -55,5 +65,6 @@ async function main() {
 }
 
 main().catch(() => {
+  chrome();
   root.innerHTML = `<div class="verdict indeterminate"><span class="verdict-icon">?</span><div><h1>${t("verify.state.indeterminate")}</h1><p>${t("verify.failed_body")}</p></div></div>`;
 });

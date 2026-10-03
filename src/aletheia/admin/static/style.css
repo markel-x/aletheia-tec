@@ -275,3 +275,24 @@ button.small { padding: 4px 10px; font-size: 12px; }
 /* Selector de idioma (i18n.js): barra superior, pie del acceso y páginas del titular. */
 select.lang-switch { width: auto; padding: 3px 8px; font-size: 12px; color: var(--fg-2); background: var(--surface); border-color: var(--line-strong); border-radius: 999px; cursor: pointer; }
 .auth-footer #auth-lang, .auth-footer #holder-lang { margin-left: auto; }
+
+/* Menú anidado: subopciones bajo Credenciales y Plantillas. */
+.nav a.nav-parent.open { color: var(--fg); }
+.nav-sub { display: flex; flex-direction: column; margin: 0 0 4px 22px; padding-left: 10px; border-left: 1px solid var(--line); }
+.nav-sub a { padding: 5px 10px; font-size: 12.5px; }
+.shell.collapsed .nav-sub { display: none; }
+
+/* Encabezado de página con acciones (listados, alta, detalle). */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
+.page-head h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.005em; }
+.content a.button-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 4px; border: 1px solid #f2f5f7; background: #f2f5f7; color: #0d1215; font-weight: 600; }
+.content a.button-link:hover { text-decoration: none; background: #fff; }
+.content a.button-link.secondary { background: transparent; color: var(--fg); border-color: var(--line-strong); font-weight: 500; }
+.content a.button-link.secondary:hover { background: var(--surface-hover); }
+.content a.button-link.small { padding: 3px 10px; font-size: 12px; }
+.tag.warn { color: var(--warn-fg); border-color: rgba(224, 123, 22, .5); background: rgba(224, 123, 22, .12); }
+
+/* Configuración: datos de solo lectura. */
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }

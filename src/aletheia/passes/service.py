@@ -71,6 +71,7 @@ def claim_info(
         "apple_pass": signer is not None,
         "apple_pass_trusted": bool(signer and signer.trusted_by_apple),
         "google_pass": google is not None,
+        "language": org.default_language,
         "attempts_left": max(0, settings.tx_code_max_attempts - offer.tx_code_attempts),
     }
 
@@ -263,6 +264,7 @@ def verify_pass_token(
         "issued_at": payload.get("iat"),
         "expires_at": payload.get("exp"),
         "checked_at": int(time.time()),
+        "language": org.default_language if org is not None else None,
     }
 
 
@@ -278,4 +280,5 @@ def _invalid(code: str, detail: str) -> dict[str, Any]:
         "issued_at": None,
         "expires_at": None,
         "checked_at": int(time.time()),
+        "language": None,
     }

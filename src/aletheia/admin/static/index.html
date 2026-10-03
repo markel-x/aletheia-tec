@@ -32,10 +32,19 @@
       </a>
       <nav id="nav" class="nav" aria-label="Principal" data-i18n-aria-label="nav.main">
         <a href="#/overview" data-icon="grid" data-i18n="nav.overview">Resumen</a>
-        <a href="#/credentials" data-icon="badge" data-i18n="nav.credentials">Credenciales</a>
-        <a href="#/templates" data-icon="layers" data-i18n="nav.templates">Plantillas</a>
+        <a href="#/credentials" class="nav-parent" data-icon="badge" data-i18n="nav.credentials">Credenciales</a>
+        <div class="nav-sub">
+          <a href="#/credentials" data-i18n="cred.list">Emitidas y pendientes</a>
+          <a href="#/credentials/new" data-i18n="cred.new_offer">Nueva oferta</a>
+        </div>
+        <a href="#/templates" class="nav-parent" data-icon="layers" data-i18n="nav.templates">Plantillas</a>
+        <div class="nav-sub">
+          <a href="#/templates" data-i18n="tpl.list">Mis plantillas</a>
+          <a href="#/templates/new" data-i18n="tpl.new">Nueva plantilla</a>
+        </div>
         <a href="#/verify" data-icon="check" data-i18n="nav.verify">Verificación</a>
         <span class="nav-group" data-i18n="nav.organization">Organización</span>
+        <a href="#/settings" data-icon="gear" data-i18n="nav.settings">Configuración</a>
         <a href="#/members" data-icon="users" data-i18n="nav.members">Miembros</a>
         <a href="#/api-clients" data-icon="key" data-i18n="nav.api_clients">Claves de API</a>
         <a href="#/signing-keys" data-icon="pen" data-i18n="nav.signing_keys">Claves de firma</a>

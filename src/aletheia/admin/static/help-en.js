@@ -144,6 +144,10 @@ export const ERROR_TIPS = {
   conflict: "An item with that name or identifier already exists.",
   forbidden: "Your role does not have permission for this action.",
   unauthorized: "Your session has expired. Please sign in again.",
+  invalid_current_password: `Check your current password; if you forgot it, ask an administrator to reset it.`,
+  use_password_change: `For your own password, use Settings → Password.`,
+  member_in_other_organizations: `This person also belongs to another organization: they must change the password themselves from their Settings.`,
+  user_session_required: `This action is only for signed-in people, not for API keys.`,
 };
 
 // ---------------------------------------------------------------------------

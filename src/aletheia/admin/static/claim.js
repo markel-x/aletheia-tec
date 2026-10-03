@@ -1,11 +1,19 @@
 // Página del titular: recibir la credencial en Apple Wallet o Google Wallet (pases) o en una
 // wallet OpenID4VCI.
 
-import { fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
+import { applyLang, chosenLang, fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
 
-translateStatic();
-document.getElementById("holder-lang").appendChild(langSwitch());
-document.title = t("claim.page_title");
+// Textos fijos y selector, una vez decidido el idioma (el de la organización emisora, salvo
+// que el visitante haya elegido otro en este navegador).
+let chromeDone = false;
+function chrome(orgLanguage) {
+  if (chromeDone) return;
+  chromeDone = true;
+  if (!chosenLang) applyLang(orgLanguage);
+  translateStatic();
+  document.getElementById("holder-lang").appendChild(langSwitch());
+  document.title = t("claim.page_title");
+}
 
 const root = document.getElementById("claim");
 const offerId = location.pathname.split("/").filter(Boolean)[1] || "";
@@ -25,11 +33,12 @@ const codeField = (id, attemptsLeft) => `
 async function main() {
   const error = new URLSearchParams(location.search).get("error");
   const res = await fetch(`/claim-info/${encodeURIComponent(offerId)}`);
-  if (!res.ok) {
+  const info = res.ok ? await res.json() : null;
+  chrome(info?.language);
+  if (!info) {
     root.innerHTML = `<h1>${t("claim.unavailable_title")}</h1><p>${t("claim.unavailable_body")}</p>`;
     return;
   }
-  const info = await res.json();
   root.innerHTML = `
     <h1>${t("claim.title")}</h1>
     <p class="lead">${t("claim.lead_html", { credential: esc(info.credential_name), issuer: esc(info.issuer_name) })}</p>
@@ -90,5 +99,6 @@ document.addEventListener("submit", async (event) => {
 });
 
 main().catch(() => {
+  chrome();
   root.innerHTML = `<h1>${t("claim.failed_title")}</h1><p>${t("claim.failed_body")}</p>`;
 });

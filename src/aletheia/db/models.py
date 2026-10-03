@@ -101,6 +101,7 @@ class Organization(Base):
     name: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(ORGANIZATION_STATUS, server_default=text("'active'"))
     data_retention_days: Mapped[int] = mapped_column(Integer, server_default=text("365"))
+    default_language: Mapped[str] = mapped_column(Text, server_default=text("'es'"))
     deleted_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = _created_at()
     updated_at: Mapped[datetime] = _updated_at()
@@ -114,6 +115,7 @@ class UserAccount(Base):
     display_name: Mapped[str] = mapped_column(Text)
     password_hash: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(USER_STATUS, server_default=text("'active'"))
+    language: Mapped[str | None] = mapped_column(Text)
     last_login_at: Mapped[datetime | None]
     deleted_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = _created_at()

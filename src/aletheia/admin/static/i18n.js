@@ -4,25 +4,46 @@
 // puede existir en un idioma y faltar en el otro (tests/test_admin_i18n.py lo comprueba).
 // Las ayudas largas, que son prosa con HTML, están en help.js (es) y help-en.js (en).
 //
-// Elección: lo que el usuario eligió (localStorage) o, si no eligió, el idioma del navegador
-// (español si empieza por «es»; inglés en cualquier otro caso).
+// Precedencia: el idioma de la cuenta (panel, guardado en el servidor) > lo elegido en este
+// navegador (selector del acceso o de las páginas del titular) > el predeterminado de la
+// organización > el idioma del navegador (español si empieza por «es»; si no, inglés).
+// Las páginas aplican los dos primeros niveles con applyLang() antes de dibujar.
 
 import { STRINGS } from "./strings.js";
 
 export const LANGS = { es: "Español", en: "English" };
 const STORAGE_KEY = "aletheia.lang";
 
-function detect() {
+function stored() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && saved in LANGS) return saved;
-  } catch { /* almacenamiento no disponible: se usa el navegador */ }
-  return (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
+    return saved && saved in LANGS ? saved : null;
+  } catch { return null; } // almacenamiento no disponible
 }
 
-export const lang = detect();
-export const locale = lang === "en" ? "en-US" : "es-UY";
+// Idioma elegido explícitamente en este navegador (null si nunca se eligió).
+export const chosenLang = stored();
+const browserLang = (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
+
+export let lang = chosenLang || browserLang;
+export let locale = lang === "en" ? "en-US" : "es-UY";
 document.documentElement.lang = lang;
+
+// Cambia el idioma de la página actual (antes de dibujarla); no lo recuerda.
+export function applyLang(next) {
+  if (!next || !(next in LANGS)) return;
+  lang = next;
+  locale = next === "en" ? "en-US" : "es-UY";
+  document.documentElement.lang = next;
+}
+
+// Recuerda (o, con null, olvida) la elección en este navegador.
+export function rememberLang(next) {
+  try {
+    if (next && next in LANGS) localStorage.setItem(STORAGE_KEY, next);
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch { /* sólo para esta visita */ }
+}
 
 // t("clave", { var: valor }) → texto en el idioma actual. Las variables {var} se sustituyen
 // tal cual: quien las usa en HTML debe escaparlas antes.
@@ -41,11 +62,12 @@ export const claimLabel = (path, name = path.split(".").at(-1)) =>
 
 export function setLang(next) {
   if (!(next in LANGS) || next === lang) return;
-  try { localStorage.setItem(STORAGE_KEY, next); } catch { /* sólo para esta visita */ }
+  rememberLang(next);
   location.reload();
 }
 
-// Selector de idioma (<select>) listo para insertar.
+// Selector de idioma (<select>) para el acceso y las páginas del titular; en el panel el
+// idioma se elige en Configuración.
 export function langSwitch() {
   const select = document.createElement("select");
   select.className = "lang-switch";

@@ -143,6 +143,10 @@ export const ERROR_TIPS = {
   conflict: "Ya existe un elemento con ese nombre o identificador.",
   forbidden: "Su rol no tiene permiso para esta acción.",
   unauthorized: "Su sesión expiró. Inicie sesión de nuevo.",
+  invalid_current_password: `Revise la contraseña actual; si la olvidó, pida a un administrador que la restablezca.`,
+  use_password_change: `Para su propia contraseña use Configuración → Contraseña.`,
+  member_in_other_organizations: `La persona también pertenece a otra organización: debe cambiar la contraseña ella misma desde su Configuración.`,
+  user_session_required: `Esta acción es sólo para personas con sesión iniciada, no para claves de API.`,
 };
 
 // ---------------------------------------------------------------------------

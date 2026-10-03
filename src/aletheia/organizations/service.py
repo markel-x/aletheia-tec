@@ -1,4 +1,5 @@
-"""Servicios de organización: alta, miembros, perfil de emisor, claves de firma.
+"""Servicios de organización: alta, miembros, perfil de emisor, claves de firma y la
+cuenta del propio usuario (perfil, idioma, contraseña).
 
 Toda consulta se filtra por ``organization_id`` del principal; un recurso de
 otra organización responde 404 (doc 02 §4).
@@ -16,11 +17,12 @@ from sqlalchemy.orm import Session
 
 from .. import audit
 from ..authz.permissions import validate_role_name
-from ..authz.service import Principal, hash_password
+from ..authz.service import Principal, hash_password, verify_password
 from ..db import models
-from ..platform import ids
+from ..platform import ids, ratelimit
 from ..platform.config import Settings
-from ..platform.errors import AppError, Conflict, NotFound
+from ..platform.db import rls_bypass
+from ..platform.errors import AppError, Conflict, Forbidden, NotFound
 from ..vc.signing import Signer
 from .keys import SignerBackend
 
@@ -28,6 +30,9 @@ log = logging.getLogger(__name__)
 
 MAX_CREDENTIAL_VALIDITY = timedelta(days=3650)
 MIN_PASSWORD_LENGTH = 12
+LANGUAGES = ("es", "en")
+PASSWORD_CHANGE_LIMIT = 10
+PASSWORD_CHANGE_WINDOW = timedelta(minutes=15)
 
 
 class WeakPassword(AppError):
@@ -110,6 +115,26 @@ def get_organization(session: Session, principal: Principal) -> models.Organizat
     org = session.get(models.Organization, principal.organization_id)
     if org is None:
         raise NotFound("Organization not found")
+    return org
+
+
+def update_organization(
+    session: Session, principal: Principal, changes: dict[str, Any]
+) -> models.Organization:
+    org = get_organization(session, principal)
+    applied = sorted(k for k in ("name", "default_language") if changes.get(k) is not None)
+    for field in applied:
+        setattr(org, field, changes[field])
+    if applied:
+        audit.record(
+            session,
+            organization_id=org.id,
+            actor=principal.audit_actor,
+            action="organization.updated",
+            target_type="organization",
+            target_id=org.id,
+            metadata={"fields": applied},
+        )
     return org
 
 
@@ -279,6 +304,152 @@ def remove_member(session: Session, principal: Principal, user_id: uuid.UUID) ->
         target_type="user",
         target_id=user_id,
     )
+
+
+class OwnPasswordReset(Conflict):
+    code = "use_password_change"
+
+
+class MemberInOtherOrganizations(Conflict):
+    code = "member_in_other_organizations"
+
+
+def _revoke_user_sessions(
+    session: Session, user_id: uuid.UUID, now: datetime, *, keep: uuid.UUID | None = None
+) -> int:
+    """Revoca las sesiones del usuario en **todas** sus organizaciones (cambio de contraseña)."""
+    revoked = 0
+    with rls_bypass(session):
+        for record in session.scalars(
+            select(models.Session)
+            .where(models.Session.user_id == user_id)
+            .where(models.Session.revoked_at.is_(None))
+        ):
+            if record.id != keep:
+                record.revoked_at = now
+                revoked += 1
+    return revoked
+
+
+def reset_member_password(
+    session: Session, principal: Principal, user_id: uuid.UUID, now: datetime | None = None
+) -> tuple[models.UserAccount, str]:
+    """Contraseña temporal para un miembro (se devuelve **una sola vez**).
+
+    La cuenta es global: sólo se restablece si el usuario no pertenece a otra organización,
+    para que un administrador de una no pueda tomar el acceso de otra. Un administrador no
+    puede restablecer a un propietario, ni nadie a sí mismo (para eso, cambio de contraseña)."""
+    now = now or datetime.now(UTC)
+    if principal.actor_type == "user" and user_id == principal.actor_id:
+        raise OwnPasswordReset("Use the password change to set your own password")
+    membership = _membership(session, principal, user_id)
+    if membership.role == "owner" and principal.role != "owner":
+        raise Forbidden("Only an owner can reset another owner's password")
+    with rls_bypass(session):
+        organizations = int(
+            session.scalar(
+                select(func.count())
+                .select_from(models.Membership)
+                .where(models.Membership.user_id == user_id)
+            )
+            or 0
+        )
+    if organizations > 1:
+        raise MemberInOtherOrganizations(
+            "The user belongs to other organizations: they must change it themselves"
+        )
+    user = session.get_one(models.UserAccount, user_id)
+    temporary = ids.new_secret()
+    user.password_hash = hash_password(temporary)
+    revoked = _revoke_user_sessions(session, user_id, now)
+    audit.record(
+        session,
+        organization_id=principal.organization_id,
+        actor=principal.audit_actor,
+        action="member.password_reset",
+        target_type="user",
+        target_id=user_id,
+        metadata={"sessions_revoked": revoked},
+    )
+    return user, temporary
+
+
+# ---------------------------------------------------------------------------
+# Cuenta del usuario autenticado
+# ---------------------------------------------------------------------------
+class NotAUser(Forbidden):
+    code = "user_session_required"
+
+
+class WrongPassword(AppError):
+    code = "invalid_current_password"
+
+
+def current_user(session: Session, principal: Principal) -> models.UserAccount:
+    if principal.actor_type != "user":
+        raise NotAUser("Only user sessions have an account (not API keys)")
+    return session.get_one(models.UserAccount, principal.actor_id)
+
+
+def update_account(
+    session: Session, principal: Principal, changes: dict[str, Any]
+) -> models.UserAccount:
+    """``display_name`` y ``language`` (``None`` = volver al idioma de la organización)."""
+    user = current_user(session, principal)
+    applied = []
+    if changes.get("display_name") is not None:
+        user.display_name = changes["display_name"]
+        applied.append("display_name")
+    if "language" in changes:
+        user.language = changes["language"]
+        applied.append("language")
+    if applied:
+        audit.record(
+            session,
+            organization_id=principal.organization_id,
+            actor=principal.audit_actor,
+            action="user.updated",
+            target_type="user",
+            target_id=user.id,
+            metadata={"fields": applied},
+        )
+    return user
+
+
+def change_password(
+    session: Session,
+    principal: Principal,
+    *,
+    current_password: str,
+    new_password: str,
+    now: datetime | None = None,
+) -> int:
+    """Cambia la contraseña propia y cierra las demás sesiones; devuelve cuántas cerró."""
+    now = now or datetime.now(UTC)
+    user = current_user(session, principal)
+    ratelimit.hit(
+        session,
+        f"password:user:{user.id}",
+        limit=PASSWORD_CHANGE_LIMIT,
+        window=PASSWORD_CHANGE_WINDOW,
+    )
+    if not verify_password(user.password_hash, current_password):
+        raise WrongPassword("The current password is not correct")
+    _check_password(new_password)
+    if verify_password(user.password_hash, new_password):
+        raise WeakPassword("The new password must be different from the current one")
+    user.password_hash = hash_password(new_password)
+    revoked = _revoke_user_sessions(session, user.id, now, keep=principal.session_id)
+    audit.record(
+        session,
+        organization_id=principal.organization_id,
+        actor=principal.audit_actor,
+        action="user.password_changed",
+        target_type="user",
+        target_id=user.id,
+        metadata={"sessions_revoked": revoked},
+    )
+    return revoked
 
 
 # ---------------------------------------------------------------------------

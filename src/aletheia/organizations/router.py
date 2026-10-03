@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
@@ -28,7 +28,44 @@ class OrganizationResponse(BaseModel):
     name: str
     status: str
     issuer: str
+    default_language: str
     created_at: datetime
+
+
+Language = Literal["es", "en"]
+
+
+class OrganizationUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    default_language: Language | None = None
+
+
+class AccountUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=200)
+    language: Language | None = Field(
+        default=None, description="null = usar el idioma predeterminado de la organización"
+    )
+
+
+class AccountResponse(BaseModel):
+    email: str
+    display_name: str
+    language: str | None
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=1024)
+    new_password: str = Field(min_length=12, max_length=1024)
+
+
+class PasswordChanged(BaseModel):
+    sessions_revoked: int = Field(description="Sesiones cerradas en otros dispositivos")
+
+
+class MemberPasswordReset(BaseModel):
+    user_id: uuid.UUID
+    email: str
+    temporary_password: str = Field(description="Se muestra una sola vez")
 
 
 class IssuerProfileResponse(BaseModel):
@@ -123,15 +160,57 @@ def _key(k: Any) -> SigningKeyResponse:
 def get_organization(
     principal: PrincipalDep, session: SessionDep, request: Request
 ) -> OrganizationResponse:
-    org = service.get_organization(session, principal)
+    return _organization(service.get_organization(session, principal), request)
+
+
+def _organization(org: Any, request: Request) -> OrganizationResponse:
     return OrganizationResponse(
         id=org.id,
         public_id=org.public_id,
         name=org.name,
         status=org.status,
         issuer=service.issuer_url(_settings(request), org.public_id),
+        default_language=org.default_language,
         created_at=org.created_at,
     )
+
+
+@router.patch("/organization", response_model=OrganizationResponse)
+def update_organization(
+    body: OrganizationUpdate,
+    principal: Annotated[Principal, Depends(require(Permission.ORG_MANAGE))],
+    session: SessionDep,
+    request: Request,
+) -> OrganizationResponse:
+    org = service.update_organization(session, principal, body.model_dump())
+    session.flush()
+    return _organization(org, request)
+
+
+# ---------------------------------------------------------------------------
+# Cuenta propia (sesiones de usuario; las claves de API no tienen cuenta)
+# ---------------------------------------------------------------------------
+@router.patch("/auth/me", response_model=AccountResponse, tags=["auth"])
+def update_account(
+    body: AccountUpdate, principal: PrincipalDep, session: SessionDep
+) -> AccountResponse:
+    # Sólo los campos enviados: «language: null» vuelve al idioma de la organización.
+    changes = body.model_dump(include=body.model_fields_set)
+    user = service.update_account(session, principal, changes)
+    return AccountResponse(email=user.email, display_name=user.display_name, language=user.language)
+
+
+@router.post("/auth/password", response_model=PasswordChanged, tags=["auth"])
+def change_password(
+    body: PasswordChange, principal: PrincipalDep, session: SessionDep
+) -> PasswordChanged:
+    revoked = service.change_password(
+        session,
+        principal,
+        current_password=body.current_password,
+        new_password=body.new_password,
+    )
+    return PasswordChanged(sessions_revoked=revoked)
 
 
 @router.get("/organization/issuer-profile", response_model=IssuerProfileResponse)
@@ -190,6 +269,16 @@ def change_member_role(
     service.change_member_role(session, principal, user_id, body.role)
     rows = [(m, u) for m, u in service.list_members(session, principal) if u.id == user_id]
     return _member(*rows[0])
+
+
+@router.post("/members/{user_id}/password-reset", response_model=MemberPasswordReset)
+def reset_member_password(
+    user_id: uuid.UUID,
+    principal: Annotated[Principal, Depends(require(Permission.MEMBERS_MANAGE))],
+    session: SessionDep,
+) -> MemberPasswordReset:
+    user, temporary = service.reset_member_password(session, principal, user_id)
+    return MemberPasswordReset(user_id=user.id, email=user.email, temporary_password=temporary)
 
 
 @router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

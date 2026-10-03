@@ -1,10 +1,12 @@
 // Panel de Aletheia: módulos ES, sin dependencias. Cliente de /v1 con token de sesión.
 
 import { claimsEditor, schemaEditor } from "./editors.js";
-import { fmtDateTime, lang, langSwitch, t, translateStatic } from "./i18n.js";
+import { LANGS, applyLang, chosenLang, fmtDateTime, lang, langSwitch, rememberLang, t, translateStatic } from "./i18n.js";
 
-// Ayudas largas (prosa con HTML): un módulo por idioma con las mismas claves.
-const { DOCS, ERROR_TIPS, FIELD_HELP, SECTION_HELP } = await import(lang === "en" ? "./help-en.js" : "./help.js");
+// Ayudas largas (prosa con HTML): un módulo por idioma con las mismas claves. Se cargan
+// cuando ya se conoce el idioma (el de la cuenta se sabe tras /v1/auth/me).
+let HELP = { DOCS: [], ERROR_TIPS: {}, FIELD_HELP: {}, SECTION_HELP: {} };
+const loadHelp = async () => { HELP = await import(lang === "en" ? "./help-en.js" : "./help.js"); };
 
 const TOKEN_KEY = "aletheia.session";
 const app = document.getElementById("app");
@@ -31,6 +33,7 @@ const ICONS = {
   chart: '<path d="M4 20V4M4 20h16"/><path d="m7 15 4-5 3 3 5-7"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1 1-1.1 1.8M12 17h.01"/>',
   code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>',
 };
 function decorateNav() {
   document.querySelectorAll("[data-icon]").forEach((a) => {
@@ -80,7 +83,7 @@ async function api(method, path, body, headers = {}) {
     }
     const e = data.error || {};
     const detail = e.details ? ` (${JSON.stringify(e.details)})` : "";
-    const tip = ERROR_TIPS[e.code] ? ` — ${ERROR_TIPS[e.code]}` : "";
+    const tip = HELP.ERROR_TIPS[e.code] ? ` — ${HELP.ERROR_TIPS[e.code]}` : "";
     throw new Error(`${e.code || res.status}: ${e.message || "error"}${detail}${tip}`);
   }
   return data;
@@ -90,12 +93,12 @@ const can = (perm) => !!me && me.permissions.includes(perm);
 
 // Ayuda desplegable bajo un campo o al inicio de una sección (contenido de help.js).
 const fieldHelp = (key) =>
-  key && FIELD_HELP[key]
-    ? `<details class="field-help"><summary>${t("common.how_to_fill")}</summary><div class="help-panel">${FIELD_HELP[key]}</div></details>`
+  key && HELP.FIELD_HELP[key]
+    ? `<details class="field-help"><summary>${t("common.how_to_fill")}</summary><div class="help-panel">${HELP.FIELD_HELP[key]}</div></details>`
     : "";
 const sectionHelp = (key) =>
-  key && SECTION_HELP[key]
-    ? `<details class="section-help"><summary>${t("common.what_is_this")}</summary><div class="help-panel">${SECTION_HELP[key]}</div></details>`
+  key && HELP.SECTION_HELP[key]
+    ? `<details class="section-help"><summary>${t("common.what_is_this")}</summary><div class="help-panel">${HELP.SECTION_HELP[key]}</div></details>`
     : "";
 
 function form(fields, submitLabel, onSubmit) {
@@ -245,8 +248,10 @@ views.login = () => {
         }
         throw new Error(String(e.message).startsWith("invalid_credentials") ? t("login.invalid") : e.message);
       }
+      const before = lang;
       await loadMe();
       location.hash = "#/overview";
+      if (lang !== before) { location.reload(); return; }
       route();
     },
   );
@@ -308,7 +313,7 @@ views.overview = async () => {
   const quick = section(t("overview.quick_actions"));
   quick.classList.add(can("usage:read") ? "span-4" : "span-12");
   quick.innerHTML += `<div class="actions">
-      ${can("credentials:issue") ? `<a href="#/credentials"><button type="button">${t("cred.new_offer")}</button></a>` : ""}
+      ${can("credentials:issue") ? `<a href="#/credentials/new"><button type="button">${t("cred.new_offer")}</button></a>` : ""}
       ${can("verifications:create") ? `<a href="#/verify"><button type="button" class="secondary">${t("overview.request_wallet")}</button></a>` : ""}
       ${can("templates:write") ? `<a href="#/templates"><button type="button" class="secondary">${t("nav.templates")}</button></a>` : ""}
     </div>
@@ -325,58 +330,39 @@ views.overview = async () => {
   }
 };
 
-views.credentials = async () => {
-  app.innerHTML = `<h1>${t("nav.credentials")}</h1>`;
-  if (can("credentials:issue")) {
-    const templates = await api("GET", "/v1/templates").catch(() => []);
-    const issue = section(t("cred.new_offer"), "", "offer");
-    issue.appendChild(
-      form(
-        [
-          { name: "template", label: t("cred.template"), type: "select", options: templates.map((x) => x.slug), help: "offer.template", after: `<div class="claims-guide" data-claims-guide></div>` },
-          { name: "holder_reference", label: t("cred.holder_reference"), placeholder: "LEG-2026-00412", help: "offer.holder_reference" },
-          { name: "claims", label: t("cred.claims"), type: "textarea", required: true, value: "{}", help: "offer.claims" },
-        ],
-        t("cred.create_offer"),
-        async (d) => {
-          const body = { template: d.template, claims: JSON.parse(d.claims) };
-          if (d.holder_reference) body.holder_reference = d.holder_reference;
-          const r = await api("POST", "/v1/credentials", body, { "Idempotency-Key": crypto.randomUUID() });
-          showOffer(r);
-          await refreshList();
-        },
-      ),
-    );
-    app.appendChild(issue);
-    const editor = claimsEditor(issue.querySelector("[name=claims]"), (m) => toast(m, true));
-    wireClaimsGuide(issue, templates, editor);
-  }
-  const list = section(t("cred.list"), "");
+// Credenciales: listado (#/credentials) y nueva oferta (#/credentials/new).
+views.credentials = async (sub) => (sub === "new" ? newOffer() : credentialList());
+
+function pageHead(title, actions = "") {
+  app.innerHTML = `<div class="page-head"><h1>${esc(title)}</h1><div class="actions">${actions}</div></div>`;
+}
+
+async function credentialList() {
+  pageHead(t("cred.list"), can("credentials:issue") ? `<a class="button-link" href="#/credentials/new">+ ${t("cred.new_offer")}</a>` : "");
+  const list = section("", "");
   app.appendChild(list);
   async function refreshList() {
     const items = await api("GET", "/v1/credentials?limit=100");
-    list.innerHTML =
-      `<h2>${t("cred.list")}</h2>` +
-      table(
-        ["Id", t("col.state"), t("col.delivery"), t("col.holder_ref"), t("col.template_vct"), t("col.created"), t("col.expires"), t("col.actions")],
-        items.map((c) => [
-          `<span class="mono">${esc(c.public_id)}</span>`,
-          tag(c.state),
-          c.state === "issued" || c.state === "revoked" ? ({ apple_pass: "Apple Wallet", google_pass: "Google Wallet" }[c.delivery] || t("cred.delivery_oid4vci")) : "—",
-          esc(c.holder_reference || "—"),
-          `<span class="mono">${esc(c.vct.split("/types/")[1] || c.vct)}</span>`,
-          fmt(c.created_at),
-          c.state === "offered" ? t("cred.offer_expires", { date: fmt(c.offer_expires_at) }) : fmt(c.expires_at),
-          `<div class="actions">${
-            c.state === "offered" && can("credentials:issue") ? `<button class="secondary" data-reset="${c.id}">${t("cred.new_link")}</button>` : ""
-          }${
-            (c.state === "offered" || c.state === "issued") && can("credentials:revoke")
-              ? `<button class="danger" data-revoke="${c.id}">${c.state === "offered" ? t("cred.cancel") : t("common.revoke")}</button>`
-              : ""
-          }</div>`,
-        ]),
-        { filter: true },
-      );
+    list.innerHTML = table(
+      ["Id", t("col.state"), t("col.delivery"), t("col.holder_ref"), t("col.template_vct"), t("col.created"), t("col.expires"), t("col.actions")],
+      items.map((c) => [
+        `<span class="mono">${esc(c.public_id)}</span>`,
+        tag(c.state),
+        c.state === "issued" || c.state === "revoked" ? ({ apple_pass: "Apple Wallet", google_pass: "Google Wallet" }[c.delivery] || t("cred.delivery_oid4vci")) : "—",
+        esc(c.holder_reference || "—"),
+        `<span class="mono">${esc(c.vct.split("/types/")[1] || c.vct)}</span>`,
+        fmt(c.created_at),
+        c.state === "offered" ? t("cred.offer_expires", { date: fmt(c.offer_expires_at) }) : fmt(c.expires_at),
+        `<div class="actions">${
+          c.state === "offered" && can("credentials:issue") ? `<button class="secondary" data-reset="${c.id}">${t("cred.new_link")}</button>` : ""
+        }${
+          (c.state === "offered" || c.state === "issued") && can("credentials:revoke")
+            ? `<button class="danger" data-revoke="${c.id}">${c.state === "offered" ? t("cred.cancel") : t("common.revoke")}</button>`
+            : ""
+        }</div>`,
+      ]),
+      { filter: true },
+    );
     bind(list, "[data-reset]", "click", async (el) => showOffer(await api("POST", `/v1/credentials/${el.dataset.reset}/offer:reset`)));
     bind(list, "[data-revoke]", "click", async (el) => {
       const reason = prompt(t("cred.revoke_prompt"), "holder_request");
@@ -387,7 +373,32 @@ views.credentials = async () => {
     });
   }
   await refreshList();
-};
+}
+
+async function newOffer() {
+  pageHead(t("cred.new_offer"), `<a class="button-link secondary" href="#/credentials">${t("cred.list")}</a>`);
+  if (!can("credentials:issue")) { app.insertAdjacentHTML("beforeend", `<div class="card muted">${t("common.no_permission")}</div>`); return; }
+  const templates = await api("GET", "/v1/templates").catch(() => []);
+  const issue = section("", "", "offer");
+  issue.appendChild(
+    form(
+      [
+        { name: "template", label: t("cred.template"), type: "select", options: templates.map((x) => x.slug), help: "offer.template", after: `<div class="claims-guide" data-claims-guide></div>` },
+        { name: "holder_reference", label: t("cred.holder_reference"), placeholder: "LEG-2026-00412", help: "offer.holder_reference" },
+        { name: "claims", label: t("cred.claims"), type: "textarea", required: true, value: "{}", help: "offer.claims" },
+      ],
+      t("cred.create_offer"),
+      async (d) => {
+        const body = { template: d.template, claims: JSON.parse(d.claims) };
+        if (d.holder_reference) body.holder_reference = d.holder_reference;
+        showOffer(await api("POST", "/v1/credentials", body, { "Idempotency-Key": crypto.randomUUID() }));
+      },
+    ),
+  );
+  app.appendChild(issue);
+  const editor = claimsEditor(issue.querySelector("[name=claims]"), (m) => toast(m, true));
+  wireClaimsGuide(issue, templates, editor);
+}
 
 // Lista los campos de la versión publicada de la plantilla elegida y ofrece un ejemplo válido.
 function walkSchema(node, prefix = "", required = []) {
@@ -458,6 +469,8 @@ function showOffer(r) {
         <p class="muted">Id: <span class="mono">${esc(r.public_id)}</span></p>
       </div>
     </div>`;
+  app.querySelector(":scope > [data-offer]")?.remove();
+  el.dataset.offer = "";
   app.insertBefore(el, app.children[1]);
   el.scrollIntoView({ behavior: "smooth" });
   // Los canales de pase dependen de la configuración del servidor: los mismos que verá el titular.
@@ -472,72 +485,98 @@ function showOffer(r) {
     .catch(() => {});
 }
 
-views.templates = async () => {
-  app.innerHTML = `<h1>${t("nav.templates")}</h1>`;
+// Plantillas: listado (#/templates), alta (#/templates/new) y detalle con versiones (#/templates/{id}).
+views.templates = async (sub) => (sub === "new" ? newTemplate() : sub ? templateDetail(sub) : templateList());
+
+async function templateList() {
+  pageHead(t("tpl.list"), can("templates:write") ? `<a class="button-link" href="#/templates/new">+ ${t("tpl.new")}</a>` : "");
   const templates = await api("GET", "/v1/templates");
-  if (can("templates:write")) {
-    const c = section(t("tpl.new"), "", "templates");
-    c.appendChild(
-      form(
-        [
-          { name: "slug", label: t("tpl.slug"), required: true, placeholder: t("tpl.slug_placeholder"), help: "template.slug" },
-          { name: "name", label: t("common.name"), required: true, placeholder: t("tpl.name_placeholder"), help: "template.name" },
-        ],
-        t("common.create"),
-        async (d) => {
-          await api("POST", "/v1/templates", d);
-          toast(t("tpl.created"));
-          route();
-        },
-      ),
-    );
-    app.appendChild(c);
-  }
-  for (const tpl of templates) {
-    const versions = await api("GET", `/v1/templates/${tpl.id}/versions`);
-    const c = section(`${tpl.name} · ${tpl.slug}`);
-    c.innerHTML += `<p class="muted mono">${esc(tpl.vct)}</p>` + table(
-      [t("col.version"), t("col.state"), t("col.selective_disclosure"), t("col.validity_days"), t("col.actions")],
-      versions.map((v) => [
-        v.version,
-        tag(v.state),
-        esc(v.selective_disclosure.join(", ") || "—"),
-        v.validity_days,
-        v.state === "draft" && can("templates:write") ? `<button class="secondary" data-publish="${tpl.id}/${v.id}">${t("tpl.publish")}</button>` : "",
-      ]),
-    );
-    if (can("templates:write")) {
-      c.innerHTML += `<h2>${t("tpl.new_version")}</h2>`;
-      c.appendChild(
-        form(
-          [
-            { name: "claims_schema", label: t("tpl.schema"), type: "textarea", required: true, value: JSON.stringify(versions.at(-1)?.claims_schema || DEFAULT_SCHEMA, null, 2), help: "version.claims_schema" },
-            { name: "selective_disclosure", label: t("tpl.selective_disclosure"), value: versions.at(-1)?.selective_disclosure.join(", ") || "given_name, family_name, completion_date, course.grade", help: "version.selective_disclosure" },
-            { name: "validity_days", label: t("col.validity_days"), type: "number", value: versions.at(-1)?.validity_days || 365, required: true, help: "version.validity_days" },
-          ],
-          t("tpl.create_version"),
-          async (d) => {
-            await api("POST", `/v1/templates/${tpl.id}/versions`, {
-              claims_schema: JSON.parse(d.claims_schema),
-              selective_disclosure: d.selective_disclosure.split(",").map((s) => s.trim()).filter(Boolean),
-              validity_days: Number(d.validity_days),
-            });
-            toast(t("tpl.version_created"));
-            route();
-          },
-        ),
-      );
-      const versionForm = c.querySelector("form:last-of-type");
-      schemaEditor(versionForm.querySelector("[name=claims_schema]"), versionForm.querySelector("[name=selective_disclosure]"), (m) => toast(m, true));
-    }
-    app.appendChild(c);
-    bind(c, "[data-publish]", "click", async (el) => {
-      await api("POST", `/v1/templates/${el.dataset.publish.replace("/", "/versions/")}/publish`);
-      toast(t("tpl.published"));
+  const versions = await Promise.all(templates.map((x) => api("GET", `/v1/templates/${x.id}/versions`).catch(() => [])));
+  app.appendChild(section("", table(
+    [t("common.name"), t("tpl.slug"), t("tpl.published_version"), t("tpl.drafts"), t("col.created"), ""],
+    templates.map((x, i) => {
+      const published = [...versions[i]].reverse().find((v) => v.state === "published");
+      const drafts = versions[i].filter((v) => v.state === "draft").length;
+      return [
+        `<a href="#/templates/${x.id}"><b>${esc(x.name)}</b></a>`,
+        `<span class="mono">${esc(x.slug)}</span>`,
+        published ? tag(`v${published.version}`) : `<span class="tag warn">${t("tpl.not_published")}</span>`,
+        drafts || "—",
+        fmt(x.created_at),
+        `<a class="button-link secondary small" href="#/templates/${x.id}">${t("common.open")}</a>`,
+      ];
+    }),
+    { filter: true },
+  )));
+}
+
+function newTemplate() {
+  pageHead(t("tpl.new"), `<a class="button-link secondary" href="#/templates">${t("tpl.list")}</a>`);
+  if (!can("templates:write")) { app.insertAdjacentHTML("beforeend", `<div class="card muted">${t("common.no_permission")}</div>`); return; }
+  const c = section("", `<p class="muted">${t("tpl.new_intro")}</p>`, "templates");
+  c.appendChild(form(
+    [
+      { name: "slug", label: t("tpl.slug"), required: true, placeholder: t("tpl.slug_placeholder"), help: "template.slug" },
+      { name: "name", label: t("common.name"), required: true, placeholder: t("tpl.name_placeholder"), help: "template.name" },
+    ],
+    t("common.create"),
+    async (d) => {
+      const created = await api("POST", "/v1/templates", d);
+      toast(t("tpl.created"));
+      location.hash = `#/templates/${created.id}`; // siguiente paso: definir y publicar una versión
+    },
+  ));
+  app.appendChild(c);
+}
+
+async function templateDetail(id) {
+  const templates = await api("GET", "/v1/templates");
+  const tpl = templates.find((x) => x.id === id);
+  if (!tpl) { pageHead(t("nav.templates")); app.insertAdjacentHTML("beforeend", `<div class="card muted">${t("tpl.not_found")}</div>`); return; }
+  pageHead(tpl.name, `<a class="button-link secondary" href="#/templates">${t("tpl.list")}</a>`);
+  crumbs.innerHTML = `${esc(org?.name || "")} / <a href="#/templates">${esc(t("nav.templates"))}</a> / <b>${esc(tpl.name)}</b>`;
+  const versions = await api("GET", `/v1/templates/${tpl.id}/versions`);
+  const info = section(t("tpl.versions"));
+  info.innerHTML += `<p class="muted"><span class="mono">${esc(tpl.slug)}</span> · <span class="mono">${esc(tpl.vct)}</span></p>` + table(
+    [t("col.version"), t("col.state"), t("col.selective_disclosure"), t("col.validity_days"), t("col.actions")],
+    versions.map((v) => [
+      v.version,
+      tag(v.state),
+      esc(v.selective_disclosure.join(", ") || "—"),
+      v.validity_days,
+      v.state === "draft" && can("templates:write") ? `<button class="secondary" data-publish="${tpl.id}/${v.id}">${t("tpl.publish")}</button>` : "",
+    ]),
+  );
+  if (!versions.some((v) => v.state === "published")) info.innerHTML += `<p class="note">${t("tpl.publish_hint")}</p>`;
+  app.appendChild(info);
+  bind(info, "[data-publish]", "click", async (el) => {
+    await api("POST", `/v1/templates/${el.dataset.publish.replace("/", "/versions/")}/publish`);
+    toast(t("tpl.published"));
+    route();
+  });
+  if (!can("templates:write")) return;
+  const c = section(t("tpl.new_version"));
+  c.appendChild(form(
+    [
+      { name: "claims_schema", label: t("tpl.schema"), type: "textarea", required: true, value: JSON.stringify(versions.at(-1)?.claims_schema || DEFAULT_SCHEMA, null, 2), help: "version.claims_schema" },
+      { name: "selective_disclosure", label: t("tpl.selective_disclosure"), value: versions.at(-1)?.selective_disclosure.join(", ") || "given_name, family_name, completion_date, course.grade", help: "version.selective_disclosure" },
+      { name: "validity_days", label: t("col.validity_days"), type: "number", value: versions.at(-1)?.validity_days || 365, required: true, help: "version.validity_days" },
+    ],
+    t("tpl.create_version"),
+    async (d) => {
+      await api("POST", `/v1/templates/${tpl.id}/versions`, {
+        claims_schema: JSON.parse(d.claims_schema),
+        selective_disclosure: d.selective_disclosure.split(",").map((x) => x.trim()).filter(Boolean),
+        validity_days: Number(d.validity_days),
+      });
+      toast(t("tpl.version_created"));
       route();
-    });
-  }
-};
+    },
+  ));
+  app.appendChild(c);
+  const versionForm = c.querySelector("form");
+  schemaEditor(versionForm.querySelector("[name=claims_schema]"), versionForm.querySelector("[name=selective_disclosure]"), (m) => toast(m, true));
+}
 
 const DEFAULT_SCHEMA = {
   type: "object",
@@ -690,8 +729,14 @@ views.members = async () => {
     list.innerHTML = `<h2>${t("nav.members")}</h2>` + table([t("col.email"), t("common.name"), t("col.role"), t("col.since"), ""], members.map((m) => [
       esc(m.email), esc(m.display_name),
       `<select data-role="${m.user_id}">${roles.map((r) => `<option ${r === m.role ? "selected" : ""}>${r}</option>`).join("")}</select>`,
-      fmt(m.created_at), `<button class="danger" data-remove="${m.user_id}">${t("common.remove")}</button>`,
+      fmt(m.created_at),
+      `<div class="actions">${m.user_id === me.actor_id ? `<span class="muted">${t("mem.you")}</span>` : `<button class="secondary" data-reset="${m.user_id}" data-email="${esc(m.email)}">${t("mem.reset_password")}</button><button class="danger" data-remove="${m.user_id}">${t("common.remove")}</button>`}</div>`,
     ]));
+    bind(list, "[data-reset]", "click", async (el) => {
+      if (!confirm(t("mem.confirm_reset", { email: el.dataset.email }))) return;
+      const r = await api("POST", `/v1/members/${el.dataset.reset}/password-reset`);
+      list.insertAdjacentHTML("afterbegin", `<div class="secret">${t("mem.temp_password", { email: esc(r.email) })} <code>${esc(r.temporary_password)}</code><br><span class="muted">${t("mem.reset_note")}</span></div>`);
+    });
     bind(list, "[data-role]", "change", async (el) => { await api("PATCH", `/v1/members/${el.dataset.role}`, { role: el.value }); toast(t("mem.role_updated")); });
     bind(list, "[data-remove]", "click", async (el) => { if (confirm(t("mem.confirm_remove"))) { await api("DELETE", `/v1/members/${el.dataset.remove}`); await refresh(); } });
   }
@@ -763,6 +808,101 @@ views.usage = async () => {
 };
 
 // ---------------------------------------------------------------------------
+// Configuración: cuenta propia, contraseña, organización y perfil del emisor
+// ---------------------------------------------------------------------------
+views.settings = async () => {
+  app.innerHTML = `<h1>${t("nav.settings")}</h1>`;
+  const [profile] = await Promise.all([api("GET", "/v1/organization/issuer-profile").catch(() => null)]);
+  const langName = (code) => LANGS[code] || code;
+  const manage = can("org:manage");
+
+  // Mi cuenta
+  const account = section(t("set.account"));
+  account.innerHTML += `<p class="muted">${t("set.signed_in_as", { email: esc(me.email || "") })} · ${t("col.role")}: <b>${esc(me.role || "")}</b></p>`;
+  account.appendChild(form([
+    { name: "display_name", label: t("set.display_name"), required: true, value: me.display_name || "" },
+    { name: "language", label: t("set.language"), type: "select", options: [
+      { value: "", label: t("set.language_org_default", { language: langName(org.default_language) }) },
+      ...Object.entries(LANGS).map(([value, label]) => ({ value, label })),
+    ], after: `<p class="muted small">${t("set.language_hint")}</p>` },
+  ], t("common.save"), async (d) => {
+    const language = d.language || null;
+    await api("PATCH", "/v1/auth/me", { display_name: d.display_name, language });
+    rememberLang(language); // el acceso de este navegador también lo usa
+    if ((language || org.default_language) !== lang) { location.reload(); return; }
+    toast(t("set.saved"));
+    await loadMe();
+  }));
+  account.querySelector("[name=language]").value = me.language || "";
+  app.appendChild(account);
+
+  // Contraseña
+  const password = section(t("set.password"));
+  password.innerHTML += `<p class="muted">${t("set.password_intro")}</p>`;
+  password.appendChild(form([
+    { name: "current_password", label: t("set.current_password"), type: "password", required: true, autocomplete: "current-password" },
+    { name: "new_password", label: t("set.new_password"), type: "password", required: true, autocomplete: "new-password" },
+    { name: "repeat_password", label: t("set.repeat_password"), type: "password", required: true, autocomplete: "new-password" },
+  ], t("set.change_password"), async (d, f) => {
+    if (d.new_password.length < 12) throw new Error(t("set.password_short"));
+    if (d.new_password !== d.repeat_password) throw new Error(t("set.password_mismatch"));
+    const r = await api("POST", "/v1/auth/password", { current_password: d.current_password, new_password: d.new_password });
+    f.reset();
+    toast(t("set.password_changed", { count: r.sessions_revoked }));
+  }));
+  app.appendChild(password);
+
+  // Organización
+  const orgCard = section(t("set.organization"));
+  orgCard.innerHTML += `<dl class="facts">
+      <dt>${t("set.public_id")}</dt><dd class="mono">${esc(org.public_id)}</dd>
+      <dt>${t("col.issuer")} (iss)</dt><dd class="mono">${esc(org.issuer)}</dd>
+      <dt>${t("sk.metadata").replace(/:$/, "")}</dt><dd><a href="/.well-known/jwt-vc-issuer/issuers/${esc(org.public_id)}" target="_blank" rel="noopener">jwt-vc-issuer</a> · <a href="/.well-known/openid-credential-issuer/issuers/${esc(org.public_id)}" target="_blank" rel="noopener">openid-credential-issuer</a></dd>
+      <dt>${t("col.created")}</dt><dd>${fmt(org.created_at)}</dd>
+    </dl>`;
+  if (manage) {
+    orgCard.appendChild(form([
+      { name: "name", label: t("set.org_name"), required: true, value: org.name },
+      { name: "default_language", label: t("set.default_language"), type: "select", options: Object.entries(LANGS).map(([value, label]) => ({ value, label })),
+        after: `<p class="muted small">${t("set.default_language_hint")}</p>` },
+    ], t("common.save"), async (d) => {
+      const updated = await api("PATCH", "/v1/organization", d);
+      if (!me.language && !chosenLang && updated.default_language !== lang) { location.reload(); return; }
+      toast(t("set.saved"));
+      await loadMe();
+      route();
+    }));
+    orgCard.querySelector("[name=default_language]").value = org.default_language;
+  } else {
+    orgCard.innerHTML += `<p class="muted">${t("set.org_name")}: <b>${esc(org.name)}</b> · ${t("set.default_language")}: <b>${esc(langName(org.default_language))}</b></p>`;
+  }
+  app.appendChild(orgCard);
+
+  // Perfil del emisor (lo que ven titulares y verificadores)
+  if (profile) {
+    const issuer = section(t("set.issuer_profile"));
+    issuer.innerHTML += `<p class="muted">${t("set.issuer_profile_intro")}</p>`;
+    if (manage) {
+      issuer.appendChild(form([
+        { name: "display_name", label: t("set.issuer_name"), required: true, value: profile.display_name },
+        { name: "default_credential_validity_days", label: t("set.default_validity"), type: "number", required: true, value: profile.default_credential_validity_days },
+        { name: "offer_ttl_hours", label: t("set.offer_ttl"), type: "number", required: true, value: profile.offer_ttl_hours },
+      ], t("common.save"), async (d) => {
+        await api("PUT", "/v1/organization/issuer-profile", {
+          display_name: d.display_name,
+          default_credential_validity_days: Number(d.default_credential_validity_days),
+          offer_ttl_hours: Number(d.offer_ttl_hours),
+        });
+        toast(t("set.saved"));
+      }));
+    } else {
+      issuer.innerHTML += `<p>${t("set.issuer_name")}: <b>${esc(profile.display_name)}</b> · ${t("set.default_validity")}: ${profile.default_credential_validity_days} · ${t("set.offer_ttl")}: ${profile.offer_ttl_hours}</p>`;
+    }
+    app.appendChild(issuer);
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Sesión y enrutado
 // ---------------------------------------------------------------------------
 views.help = async (root = app) => {
@@ -771,11 +911,11 @@ views.help = async (root = app) => {
     <div class="help-layout">
       <nav class="help-toc" aria-label="${t("help.contents")}">
         <div class="filter"><input type="search" placeholder="${t("help.search")}" data-help-search aria-label="${t("help.search")}"></div>
-        ${DOCS.map((d) => `<a href="#/help/${d.id}" data-toc="${d.id}">${esc(d.title)}</a>`).join("")}
+        ${HELP.DOCS.map((d) => `<a href="#/help/${d.id}" data-toc="${d.id}">${esc(d.title)}</a>`).join("")}
         <a href="/docs" target="_blank" rel="noopener">${t("help.api_reference")} ↗</a>
       </nav>
       <div class="help-body">
-        ${DOCS.map((d) => `<section class="card help-doc" id="help-${d.id}" data-doc="${d.id}"><h2>${esc(d.title)}</h2>${d.body}</section>`).join("")}
+        ${HELP.DOCS.map((d) => `<section class="card help-doc" id="help-${d.id}" data-doc="${d.id}"><h2>${esc(d.title)}</h2>${d.body}</section>`).join("")}
         <p class="empty" data-help-empty hidden>${t("help.no_results_html")}</p>
       </div>
     </div>`;
@@ -800,20 +940,23 @@ views.help = async (root = app) => {
   }
 };
 
-const TITLES = {
-  overview: t("nav.overview"), credentials: t("nav.credentials"), templates: t("nav.templates"), verify: t("nav.verify"),
-  members: t("nav.members"), "api-clients": t("nav.api_clients"), "signing-keys": t("nav.signing_keys"), audit: t("nav.audit"),
-  usage: t("nav.usage"), help: t("nav.help"),
+const TITLE_KEYS = {
+  overview: "nav.overview", credentials: "nav.credentials", templates: "nav.templates", verify: "nav.verify",
+  settings: "nav.settings", members: "nav.members", "api-clients": "nav.api_clients", "signing-keys": "nav.signing_keys",
+  audit: "nav.audit", usage: "nav.usage", help: "nav.help",
 };
+const SUB_TITLE_KEYS = { "credentials/new": "cred.new_offer", "templates/new": "tpl.new" };
+const titleFor = (key, sub) => t(SUB_TITLE_KEYS[`${key}/${sub}`] || TITLE_KEYS[key] || "nav.overview");
 
 async function loadMe() {
   if (!sessionStorage.getItem(TOKEN_KEY)) { me = null; return; }
   try {
     me = await api("GET", "/v1/auth/me");
     org = await api("GET", "/v1/organization");
-    who.innerHTML = `<strong title="${esc(org.name)}">${esc(org.name)}</strong>${esc(me.role || me.actor_type)}<br><button class="secondary" id="logout" type="button">${t("shell.logout")}</button>`;
+    // Idioma: el de la cuenta, si no el elegido en este navegador, si no el de la organización.
+    applyLang(me.language || chosenLang || org.default_language);
+    who.innerHTML = `<strong title="${esc(me.email || "")}">${esc(me.display_name || org.name)}</strong>${esc(org.name)} · ${esc(me.role || me.actor_type)}<br><button class="secondary" id="logout" type="button">${t("shell.logout")}</button>`;
     topbarRight.innerHTML = `<span class="pill" title="${esc(org.public_id)}">${t("shell.organization", { name: esc(org.name) })}</span>`;
-    topbarRight.prepend(langSwitch());
     document.getElementById("logout").onclick = async () => {
       await api("POST", "/v1/auth/logout").catch(() => {});
       sessionStorage.removeItem(TOKEN_KEY);
@@ -825,7 +968,7 @@ async function loadMe() {
 }
 
 async function route() {
-  const name = (location.hash.replace(/^#\//, "") || "overview").split("/")[0];
+  const [name, sub] = (location.hash.replace(/^#\//, "") || "overview").split("/");
   if (!me) {
     shell.hidden = true;
     auth.hidden = false;
@@ -842,10 +985,21 @@ async function route() {
   auth.hidden = true;
   shell.hidden = false;
   const key = views[name] && name !== "login" ? name : "overview";
-  document.querySelectorAll(".nav a, .sidebar-footer a").forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#/${key}`));
-  crumbs.innerHTML = `${esc(org?.name || "")} / <b>${esc(TITLES[key] || key)}</b>`;
-  document.title = `${TITLES[key] || "Aletheia"} · Aletheia`;
-  try { await views[key](); } catch (e) { app.innerHTML = `<div class="card">${t("common.error", { message: esc(e.message) })}</div>`; }
+  const here = sub ? `#/${key}/${sub}` : `#/${key}`;
+  // Activo: el enlace exacto (subopción) o, en un grupo, la opción padre de la página.
+  document.querySelectorAll(".nav a, .sidebar-footer a").forEach((a) => {
+    const href = a.getAttribute("href");
+    const parent = a.classList.contains("nav-parent");
+    // En el detalle (#/templates/{id}) queda marcada la subopción del listado.
+    a.classList.toggle("active", !parent && (href === here || (!!a.closest(".nav-sub") && href === `#/${key}` && !!sub && sub !== "new")));
+    a.classList.toggle("open", a.classList.contains("nav-parent") && href === `#/${key}`);
+  });
+  const title = titleFor(key, sub);
+  crumbs.innerHTML = sub
+    ? `${esc(org?.name || "")} / <a href="#/${key}">${esc(t(TITLE_KEYS[key]))}</a> / <b>${esc(title)}</b>`
+    : `${esc(org?.name || "")} / <b>${esc(title)}</b>`;
+  document.title = `${title} · Aletheia`;
+  try { await views[key](sub); } catch (e) { app.innerHTML = `<div class="card">${t("common.error", { message: esc(e.message) })}</div>`; }
 }
 
 try {
@@ -856,9 +1010,10 @@ document.getElementById("collapse").addEventListener("click", () => {
   try { localStorage.setItem("aletheia.sidebar", shell.classList.contains("collapsed") ? "collapsed" : "open"); } catch { /* idem */ }
 });
 
+await loadMe();
+await loadHelp();
 translateStatic();
 document.getElementById("auth-lang").appendChild(langSwitch());
 decorateNav();
 window.addEventListener("hashchange", route);
-await loadMe();
 route();
