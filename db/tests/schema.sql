@@ -11,7 +11,7 @@ DECLARE
     'issuer_profile','signing_key','credential_template','template_version','issuance',
     'issuance_pending_claims','status_list','credential_status','trust_policy','trusted_issuer',
     'presentation_request','verification_record','audit_event','usage_event','idempotency_record',
-    'oid4vci_nonce','oid4vci_access_token','rate_limit_bucket'];
+    'oid4vci_nonce','oid4vci_access_token','rate_limit_bucket','access_request'];
   missing text[];
 BEGIN
   SELECT array_agg(t) INTO missing FROM unnest(expected) AS t
@@ -28,7 +28,8 @@ BEGIN
   SELECT array_agg(table_name::text) INTO bad
     FROM information_schema.tables t
    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-     AND table_name NOT IN ('alembic_version','organization','user_account','oid4vci_nonce','oid4vci_access_token','rate_limit_bucket')
+     AND table_name NOT IN ('alembic_version','organization','user_account','oid4vci_nonce','oid4vci_access_token','rate_limit_bucket',
+                            'access_request')
      AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
                       WHERE c.table_schema = 'public' AND c.table_name = t.table_name
                         AND c.column_name = 'organization_id');

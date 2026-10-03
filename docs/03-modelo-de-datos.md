@@ -123,6 +123,13 @@ Estados observables en el panel: `offered` (oferta creada), `issued` (**recepci�
 ### rate_limit_bucket
 (`subject`, `window_start`) PK, `count`. Purga tras la ventana.
 
+### access_request
+Solicitud de acceso de la página de inicio (migración 0012). **Sin `organization_id`**: existe antes
+que la organización, que un operador crea con `bootstrap` tras revisarla. `organization`,
+`contact_name`, `email` (citext), `use_case`, `website`, `language`, `status`
+(`pending`|`approved`|`rejected`), `created_at`, `processed_at`. Clasif. P (datos de contacto).
+Purga: resueltas a 180 días; cualquiera a 1 año.
+
 ## Diagrama entidad-relación (simplificado)
 
 ```mermaid
