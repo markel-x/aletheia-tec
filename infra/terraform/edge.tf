@@ -146,9 +146,18 @@ resource "aws_lb_listener" "https" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate_validation.api[0].certificate_arn
+  # Detrás de CloudFront, lo que no trae la cabecera secreta de origen se rechaza (frontend.tf).
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.api.arn
+    type             = local.cdn ? "fixed-response" : "forward"
+    target_group_arn = local.cdn ? null : aws_lb_target_group.api.arn
+    dynamic "fixed_response" {
+      for_each = local.cdn ? [1] : []
+      content {
+        content_type = "text/plain"
+        message_body = "Forbidden"
+        status_code  = "403"
+      }
+    }
   }
 }
 
@@ -179,14 +188,28 @@ resource "aws_acm_certificate_validation" "api" {
   validation_record_fqdns = var.route53_zone_id == "" ? null : [for r in aws_route53_record.cert_validation : r.fqdn]
 }
 
+# El dominio público: CloudFront (frontend + API) o, antes del paso 2 de frontend.tf, el ALB.
 resource "aws_route53_record" "api" {
   count   = var.route53_zone_id == "" ? 0 : 1
   zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "A"
   alias {
-    name                   = aws_lb.main.dns_name
-    zone_id                = aws_lb.main.zone_id
-    evaluate_target_health = true
+    name                   = local.cdn ? aws_cloudfront_distribution.main.domain_name : aws_lb.main.dns_name
+    zone_id                = local.cdn ? aws_cloudfront_distribution.main.hosted_zone_id : aws_lb.main.zone_id
+    evaluate_target_health = !local.cdn
+  }
+}
+
+# IPv6 sólo con CloudFront (el ALB es IPv4).
+resource "aws_route53_record" "api_ipv6" {
+  count   = var.route53_zone_id != "" && local.cdn ? 1 : 0
+  zone_id = var.route53_zone_id
+  name    = var.domain_name
+  type    = "AAAA"
+  alias {
+    name                   = aws_cloudfront_distribution.main.domain_name
+    zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
+    evaluate_target_health = false
   }
 }

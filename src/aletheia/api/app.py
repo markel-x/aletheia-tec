@@ -30,7 +30,7 @@ from ..platform.crypto import build_encryptor, tx_code_key
 from ..platform.db import Database
 from ..platform.errors import install_error_handlers
 from ..platform.logging import configure_logging
-from ..platform.middleware import RequestContextMiddleware
+from ..platform.middleware import ClientIPMiddleware, RequestContextMiddleware
 from ..platform.site_gate import SiteGateMiddleware
 from ..status import router as status_router
 from ..usage import router as usage_router
@@ -114,6 +114,8 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         openapi_tags=OPENAPI_TAGS,
     )
     app.add_middleware(RequestContextMiddleware)
+    if settings.client_ip_header:
+        app.add_middleware(ClientIPMiddleware, header=settings.client_ip_header)
     if settings.site_basic_auth is not None:
         # Por fuera de todo: responde 401 antes de tocar la base o los registros de la app.
         app.add_middleware(
@@ -131,7 +133,8 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
     app.include_router(verification_router.router)
     app.include_router(oid4vp_verifier.router)
     app.include_router(oid4vp_verifier.public_router)
-    app.include_router(admin_router.router)
+    if settings.serve_frontend:
+        app.include_router(admin_router.router)
     app.include_router(passes_router.router)
     app.include_router(access_router.router)
     return app

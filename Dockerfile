@@ -48,6 +48,10 @@ RUN uv sync --frozen --no-install-project --no-editable --link-mode=copy \
       --python /usr/local/bin/python3
 COPY src ./src
 COPY tests ./tests
+# Borde (CloudFront y su réplica local): las pruebas comprueban que coinciden con la API.
+COPY infra/terraform/cloudfront ./infra/terraform/cloudfront
+COPY infra/terraform/frontend.tf ./infra/terraform/frontend.tf
+COPY infra/local-edge ./infra/local-edge
 # El código queda de root y de sólo lectura para el usuario de ejecución;
 # las cachés de las herramientas se desactivan o van a /tmp.
 ENV RUFF_NO_CACHE=true \

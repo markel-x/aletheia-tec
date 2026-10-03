@@ -4,5 +4,8 @@
 !uv.lock
 !src/
 !tests/
+!infra/terraform/cloudfront/
+!infra/terraform/frontend.tf
+!infra/local-edge/
 **/__pycache__
 **/*.py[cod]

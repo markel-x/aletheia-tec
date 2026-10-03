@@ -1,5 +1,7 @@
-# Entorno local reproducible.
-#   docker compose up -d api         -> db → migrate → api en http://127.0.0.1:8008
+# Entorno local reproducible, con la misma forma que AWS:
+#   docker compose up -d edge        -> db → migrate → api → edge en http://127.0.0.1:8008
+#     edge hace de CloudFront (infra/local-edge): páginas desde los archivos del frontend con la
+#     misma función de CloudFront, y la API (que no publica puerto, como detrás del ALB).
 #   docker compose run --rm tests    -> lint, tipos y pruebas (incluidas las de BD, contra aletheia_test)
 #   docker compose run --rm demo     -> flujo emisión/verificación/revocación con datos ficticios
 #   docker compose run --rm db-test  -> comprueba esquema, restricciones y privilegios en SQL
@@ -73,11 +75,40 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *app-env
+      # Como en AWS: las páginas las sirve el borde y la IP del visitante llega en su cabecera.
+      ALETHEIA_SERVE_FRONTEND: "false"
+      ALETHEIA_CLIENT_IP_HEADER: cloudfront-viewer-address
     volumes:
       - dev-keys:/var/lib/aletheia/dev-keys   # claves PEM de desarrollo; nunca en el repositorio
-    ports:
-      - "127.0.0.1:${ALETHEIA_API_PORT:-8008}:8000"
     command: ["api"]
+
+  # CloudFront local: la función de CloudFront de Terraform corre en nginx (njs) sobre los archivos
+  # del frontend montados en vivo (editar y recargar, sin reconstruir). Ver infra/local-edge.
+  edge:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      ALETHEIA_SITE_BASIC_AUTH: ${ALETHEIA_SITE_BASIC_AUTH:-}   # usuario:contraseña para probar el acceso restringido
+    volumes:
+      - ./infra/local-edge:/etc/nginx/edge:ro
+      - ./infra/terraform/cloudfront:/etc/nginx/cloudfront:ro
+      - ./src/aletheia/admin/static:/srv/site/admin/static:ro
+    ports:
+      - "127.0.0.1:${ALETHEIA_API_PORT:-8008}:8080"
+    entrypoint: ["/etc/nginx/edge/entrypoint.sh"]
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=32m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readyz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   maintenance:
     <<: *hardening
@@ -108,7 +139,7 @@ services:
   interop:
     image: node:22-alpine
     depends_on:
-      api:
+      edge:
         condition: service_healthy
     working_dir: /interop
     volumes:
@@ -116,7 +147,7 @@ services:
     tmpfs:
       - /tmp:mode=1777,size=256m
     environment:
-      ALETHEIA_API: http://api:8000
+      ALETHEIA_API: http://edge:8080   # por el borde, como un cliente real
       ALETHEIA_PUBLIC_BASE: http://127.0.0.1:8008
       ALETHEIA_EMAIL: ${ALETHEIA_EMAIL:-owner@example.org}
       npm_config_cache: /tmp/npm-cache
@@ -127,15 +158,15 @@ services:
     # Copia a /tmp para instalar sin escribir en el repositorio; npm ci respeta el lock exacto.
     command: ["sh", "-c", "cp -r /interop/package.json /interop/package-lock.json /interop/run.mjs /tmp/ && cd /tmp && npm ci --no-audit --no-fund --silent && node run.mjs"]
 
-  # Túnel HTTPS temporal para probar con un teléfono (docs/poc-iphone.md). Expone la API a Internet:
+  # Túnel HTTPS temporal para probar con un teléfono (docs/poc-iphone.md). Expone el sitio a Internet:
   # sólo bajo el perfil "tunnel" y detenerlo al terminar.
   tunnel:
     image: cloudflare/cloudflared:2025.9.1
     profiles: ["tunnel"]
     depends_on:
-      api:
+      edge:
         condition: service_healthy
-    command: ["tunnel", "--no-autoupdate", "--url", "http://api:8000"]
+    command: ["tunnel", "--no-autoupdate", "--url", "http://edge:8080"]
     read_only: true
     cap_drop: [ALL]
     security_opt:

@@ -73,6 +73,18 @@ resource "aws_iam_role_policy" "deploy" {
         Condition = { ArnEquals = { "ecs:cluster" = aws_ecs_cluster.main.arn } }
       },
       { Effect = "Allow", Action = ["ecs:DescribeTasks"], Resource = "*" },
+      # Frontend: publicar en S3 e invalidar la caché de CloudFront.
+      { Effect = "Allow", Action = ["s3:ListBucket"], Resource = aws_s3_bucket.frontend.arn },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.frontend.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+        Resource = aws_cloudfront_distribution.main.arn
+      },
       {
         Effect   = "Allow"
         Action   = ["iam:PassRole"]

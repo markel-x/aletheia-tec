@@ -123,6 +123,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  count             = local.cdn ? 0 : 1 # detrás de CloudFront: alb_from_cloudfront (frontend.tf)
   security_group_id = aws_security_group.alb.id
   description       = "HTTPS desde Internet"
   ip_protocol       = "tcp"
@@ -132,6 +133,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  count             = local.cdn ? 0 : 1 # detrás de CloudFront: alb_from_cloudfront (frontend.tf)
   security_group_id = aws_security_group.alb.id
   description       = "HTTP desde Internet (redireccion a HTTPS)"
   ip_protocol       = "tcp"

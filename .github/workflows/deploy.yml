@@ -3,7 +3,8 @@
 # Requisitos por entorno de GitHub (Settings → Environments → staging / production):
 #   variables: AWS_DEPLOY_ROLE_ARN, AWS_REGION, ECR_REPOSITORY, ECS_CLUSTER, ECS_SERVICE,
 #              API_TASK_FAMILY, MIGRATE_TASK_FAMILY, MAINT_TASK_FAMILY, PRIVATE_SUBNETS,
-#              APP_SECURITY_GROUP, PUBLIC_BASE_URL, SMOKE_BASE_URL   (salida "deploy_config" de Terraform)
+#              APP_SECURITY_GROUP, PUBLIC_BASE_URL, SMOKE_BASE_URL, FRONTEND_BUCKET,
+#              CDN_DISTRIBUTION_ID   (salida "deploy_config" de Terraform)
 #   production: revisores obligatorios.
 # Y una variable de REPOSITORIO DEPLOY_ENABLED=true: las variables de entorno no están disponibles
 # en el `if` del trabajo (se resuelven al empezar), así que no sirven para decidir si se ejecuta.
@@ -142,6 +143,40 @@ jobs:
             --task-definition "$TD_API" > /dev/null
           aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
 
+      # Frontend (infra/terraform/frontend.tf): las páginas y sus recursos van a S3, detrás de
+      # CloudFront, con las mismas rutas que servía la API. Después de la API: la página nueva puede
+      # usar endpoints nuevos. Sin FRONTEND_BUCKET (entorno anterior a frontend.tf), se omite.
+      - name: Publicar el frontend en S3 e invalidar CloudFront
+        if: ${{ vars.FRONTEND_BUCKET != '' }}
+        env:
+          BUCKET: ${{ vars.FRONTEND_BUCKET }}
+          DISTRIBUTION: ${{ vars.CDN_DISTRIBUTION_ID }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+        run: |
+          site="$RUNNER_TEMP/site"
+          rm -rf "$site" && mkdir -p "$site/admin"
+          cp -R src/aletheia/admin/static "$site/admin/static"
+          # Vista previa al compartir: URLs absolutas (en local las completa la API).
+          sed -i "s#__PUBLIC_BASE__#${PUBLIC_BASE_URL}#g" "$site/admin/static/landing.html"
+          if grep -rl "__PUBLIC_BASE__" "$site"; then exit 1; fi
+          # Tipo y caché explícitos por extensión (sin depender de los mime.types del runner).
+          upload() {
+            aws s3 cp "$site/" "s3://$BUCKET/" --recursive --only-show-errors \
+              --exclude "*" --include "*.$1" --content-type "$2" --cache-control "$3"
+          }
+          upload html "text/html; charset=utf-8" "no-cache"
+          upload js   "text/javascript; charset=utf-8" "no-cache"
+          upload css  "text/css; charset=utf-8" "no-cache"
+          upload svg  "image/svg+xml" "public, max-age=86400"
+          upload png  "image/png" "public, max-age=86400"
+          upload webp "image/webp" "public, max-age=86400"
+          upload ico  "image/x-icon" "public, max-age=86400"
+          # Borra lo que ya no existe (los demás quedan iguales: mismo tamaño, no se resuben).
+          aws s3 sync "$site/" "s3://$BUCKET/" --delete --size-only --only-show-errors
+          id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths "/*" \
+            --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION" --id "$id"
+
       - name: Prueba de humo
         # SMOKE_BASE_URL = PUBLIC_BASE_URL con HTTPS; la dirección HTTP del ALB mientras https_enabled = false.
         env:
@@ -149,3 +184,7 @@ jobs:
         run: |
           curl -fsS --retry 5 --retry-all-errors --retry-delay 10 "$BASE/healthz"
           curl -fsS --retry 5 --retry-all-errors --retry-delay 10 "$BASE/readyz"
+          # La página de inicio responde (200, o 401 con el acceso restringido temporal).
+          code=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-all-errors "$BASE/")
+          echo "inicio: $code"
+          [ "$code" = "200" ] || [ "$code" = "401" ]

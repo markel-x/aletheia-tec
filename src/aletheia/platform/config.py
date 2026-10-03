@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     ECS sólo el ALB llega a la tarea); Terraform la acota a la VPC. Nunca ``*``: con eso gana la
     primera, que escribe el cliente, y cualquiera evade los límites por red falsificándola."""
 
+    serve_frontend: bool = True
+    """Servir las páginas (inicio, panel, titular, emisor, documentación). En AWS las sirve
+    CloudFront desde S3 y la API sólo responde a la API."""
+
+    client_ip_header: str | None = None
+    """Cabecera con la IP del visitante puesta por la CDN (``cloudfront-viewer-address``). Sólo
+    se define cuando el ALB acepta únicamente tráfico de CloudFront (cabecera secreta de origen):
+    si no, cualquiera podría escribirla."""
+
     demo_organization: str | None = None
     """``public_id`` de la organización de demostración. Si está definida, la página de inicio
     ofrece «Pruébelo ahora»: cualquiera obtiene una credencial de muestra de esa organización

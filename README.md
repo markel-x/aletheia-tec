@@ -24,7 +24,7 @@ Token Status List (draft-21) · emisor identificado por JWT VC Issuer Metadata �
 | [`docs/01-perfil-interoperabilidad.md`](docs/01-perfil-interoperabilidad.md) | Estándares, versiones, formato exacto, algoritmos, claves, estado, privacidad, brechas HAIP |
 | [`docs/02-arquitectura.md`](docs/02-arquitectura.md) | Componentes, módulos, secuencias (emisión, verificación, revocación), permisos, AWS |
 | [`docs/03-modelo-de-datos.md`](docs/03-modelo-de-datos.md) | Entidades, restricciones, índices, clasificación y retención |
-| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0018 |
+| [`docs/adr/`](docs/adr/) | ADR-0001 a ADR-0019 |
 | [`docs/incrementos/01.md`](docs/incrementos/01.md) | Reporte del incremento 1 |
 | [`docs/incrementos/02.md`](docs/incrementos/02.md) | Reporte del incremento 2 |
 | [`docs/incrementos/03.md`](docs/incrementos/03.md) | Reporte del incremento 3 |
@@ -73,7 +73,7 @@ Requisitos: Docker Engine 24+ con Compose v2 y acceso a Docker Hub y PyPI.
 
 ```bash
 docker compose build                # imágenes aletheia:test y aletheia:runtime (uv sync --frozen)
-docker compose up -d api            # db → migrate → api en http://127.0.0.1:8008
+docker compose up -d edge            # db → migrate → api → edge (CloudFront local) en http://127.0.0.1:8008
 curl -s http://127.0.0.1:8008/readyz
 docker compose run --rm tests       # ruff + mypy + pytest (las pruebas de BD usan la base aletheia_test)
 docker compose run --rm db-test     # pruebas SQL del esquema, restricciones y privilegios

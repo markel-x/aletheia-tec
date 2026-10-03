@@ -39,5 +39,7 @@ output "deploy_config" {
     APP_SECURITY_GROUP  = aws_security_group.app.id
     PUBLIC_BASE_URL     = local.public_base_url
     SMOKE_BASE_URL      = var.https_enabled ? local.public_base_url : "http://${aws_lb.main.dns_name}"
+    FRONTEND_BUCKET     = aws_s3_bucket.frontend.id
+    CDN_DISTRIBUTION_ID = aws_cloudfront_distribution.main.id
   }
 }

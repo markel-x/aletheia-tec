@@ -15,6 +15,12 @@ locals {
     # Sólo el ALB (dentro de la VPC) puede declarar la IP del cliente en X-Forwarded-For.
     { name = "ALETHEIA_FORWARDED_ALLOW_IPS", value = var.vpc_cidr },
   ]
+  # Paso 2 de frontend.tf: CloudFront sirve las páginas y entrega la IP real del visitante (la
+  # cabecera es confiable porque el ALB rechaza lo que no viene de CloudFront).
+  cdn_env = local.cdn ? [
+    { name = "ALETHEIA_SERVE_FRONTEND", value = "false" },
+    { name = "ALETHEIA_CLIENT_IP_HEADER", value = "cloudfront-viewer-address" },
+  ] : []
 
   verifier_secrets = var.verifier_identity_secret_arn == "" ? [] : [
     { name = "ALETHEIA_VERIFIER_KEY_PEM", valueFrom = "${var.verifier_identity_secret_arn}:key_pem::" },
@@ -200,7 +206,7 @@ resource "aws_ecs_task_definition" "api" {
     essential    = true
     command      = ["api"]
     portMappings = [{ containerPort = 8000, protocol = "tcp" }]
-    environment = concat(local.common_env, local.google_wallet_env, local.demo_env,
+    environment = concat(local.common_env, local.google_wallet_env, local.demo_env, local.cdn_env,
     [{ name = "ALETHEIA_DATABASE_URL", value = local.app_dsn }])
     secrets = concat([
       { name = "ALETHEIA_DATABASE_PASSWORD", valueFrom = aws_secretsmanager_secret.app_db_password.arn },

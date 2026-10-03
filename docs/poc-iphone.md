@@ -17,7 +17,7 @@ Flujo completo de punta a punta con un iPhone real. Dos caminos, desde la misma 
    ```
    Con esa URL, reinicie la API para que la use como origen público (emisor, enlaces, QR):
    ```bash
-   ALETHEIA_PUBLIC_BASE_URL=https://<subdominio>.trycloudflare.com docker compose up -d api
+   ALETHEIA_PUBLIC_BASE_URL=https://<subdominio>.trycloudflare.com docker compose up -d edge
    ```
    El túnel expone la API a Internet mientras esté activo: deténgalo al terminar
    (`docker compose --profile tunnel stop tunnel`). Las credenciales emitidas con una URL quedan ligadas a

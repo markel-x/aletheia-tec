@@ -157,3 +157,13 @@ variable "create_github_oidc_provider" {
   type        = bool
   default     = true
 }
+
+variable "frontend_on_cloudfront" {
+  description = <<-EOT
+    Paso 2 de frontend.tf: el dominio apunta a CloudFront (páginas desde S3, API al ALB), el ALB sólo
+    acepta tráfico de CloudFront y la API deja de servir páginas. Antes, publicar el frontend en S3
+    con el pipeline (paso 1).
+  EOT
+  type        = bool
+  default     = false
+}

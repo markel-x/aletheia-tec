@@ -20,7 +20,6 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
-from ..admin.router import serve_static
 from ..api.deps import BackendDep, EncryptorDep, SystemSessionDep
 from ..api.routing import TransactionalRoute
 from ..authz.service import network_prefix
@@ -66,17 +65,6 @@ def _offer_id(value: str) -> bytes:
     if raw is None:
         raise NotFound("Offer not found")
     return raw
-
-
-@router.get("/claim/{offer_id}", include_in_schema=False)
-def claim_page(offer_id: str) -> Response:
-    _offer_id(offer_id)
-    return serve_static("claim.html")
-
-
-@router.get("/v", include_in_schema=False)
-def verify_page() -> Response:
-    return serve_static("verify.html")
 
 
 @router.get("/claim-info/{offer_id}")

@@ -1,7 +1,11 @@
-"""``/admin``: HTML + módulos ES sin build, mismo origen, CSP estricta.
+"""Frontend: páginas HTML + módulos ES sin build, mismo origen, CSP estricta.
 
 El panel es un cliente más de ``/v1``: guarda el token de sesión en
 ``sessionStorage`` (muere con la pestaña) y lo envía como ``Bearer``.
+
+En AWS estas páginas las sirve CloudFront desde S3 (infra/terraform/frontend.tf) con las mismas
+rutas y la misma CSP, y la API arranca con ``ALETHEIA_SERVE_FRONTEND=false``. En desarrollo y en
+las pruebas las sirve este router, para trabajar con un solo proceso.
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
 
 from ..api.routing import TransactionalRoute
+from ..issuance.service import offer_id_from_url
 from ..platform.config import Environment, Settings
 from ..platform.errors import NotFound
 
@@ -85,6 +90,26 @@ def api_docs(request: Request) -> Response:
     response = serve_static("docs.html")
     response.headers["Content-Security-Policy"] = DOCS_CSP
     return response
+
+
+# Páginas del titular y del emisor: HTML estático; sus datos llegan por la API (/claim-info,
+# /issuer-info, /public/pass-verifications).
+@router.get("/claim/{offer_id}", include_in_schema=False)
+def claim_page(offer_id: str) -> Response:
+    if offer_id_from_url(offer_id) is None:
+        raise NotFound("Offer not found")
+    return serve_static("claim.html")
+
+
+@router.get("/v", include_in_schema=False)
+def verify_page() -> Response:
+    return serve_static("verify.html")
+
+
+# La URL ``iss`` de las credenciales, abierta en un navegador (los wallets leen /.well-known/…).
+@router.get("/issuers/{org_public_id}", include_in_schema=False)
+def issuer_page(org_public_id: str) -> Response:
+    return serve_static("issuer.html")
 
 
 @router.get("/favicon.ico", include_in_schema=False)

@@ -36,15 +36,21 @@ jobs:
         run: docker compose run --rm db-test
       - name: Demostración del núcleo
         run: docker compose run --rm demo > /dev/null
-      - name: API arranca y responde /readyz
+      - name: API y borde (réplica local de CloudFront) arrancan y responden
         run: |
-          docker compose up -d api
+          docker compose up -d edge
+          ok=""
           for _ in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8008/readyz; then echo; exit 0; fi
+            if curl -fsS http://127.0.0.1:8008/readyz; then echo; ok=1; break; fi
             sleep 2
           done
-          docker compose logs api migrate db
-          exit 1
+          [ -n "$ok" ] || { docker compose logs edge api migrate db; exit 1; }
+          # Páginas por la función de CloudFront (njs) con su CSP; rutas desconocidas → 404.
+          for path in / /admin/ /v /docs /issuers/org_ci /claim/0123456789abcdef0123456789abcdef; do
+            curl -fsS -o /dev/null -D headers.txt "http://127.0.0.1:8008$path"
+            grep -qi "^content-security-policy: default-src 'self'" headers.txt
+          done
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8008/nope)" = "404" ]
       - name: Interoperabilidad con @sd-jwt/sd-jwt-vc (implementación independiente)
         run: |
           docker compose run --rm -e ALETHEIA_BOOTSTRAP_PASSWORD bootstrap \
