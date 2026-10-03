@@ -355,4 +355,5 @@ export const STRINGS = {
   "set.issuer_name": { es: "Nombre visible del emisor", en: "Issuer display name" },
   "set.default_validity": { es: "Validez por defecto de las credenciales (días)", en: "Default credential validity (days)" },
   "set.offer_ttl": { es: "Vigencia de las ofertas (horas)", en: "Offer lifetime (hours)" },
+  "nav.toggle_group": { es: "Mostrar u ocultar las opciones de {name}", en: "Show or hide the {name} options" },
 };

@@ -994,6 +994,7 @@ async function route() {
     a.classList.toggle("active", !parent && (href === here || (!!a.closest(".nav-sub") && href === `#/${key}` && !!sub && sub !== "new")));
     a.classList.toggle("open", a.classList.contains("nav-parent") && href === `#/${key}`);
   });
+  openGroupOf(key);
   const title = titleFor(key, sub);
   crumbs.innerHTML = sub
     ? `${esc(org?.name || "")} / <a href="#/${key}">${esc(t(TITLE_KEYS[key]))}</a> / <b>${esc(title)}</b>`
@@ -1005,6 +1006,32 @@ async function route() {
 try {
   if (localStorage.getItem("aletheia.sidebar") === "collapsed") shell.classList.add("collapsed");
 } catch { /* almacenamiento no disponible */ }
+
+// Grupos del menú (Credenciales, Plantillas): se pliegan con la flecha y se recuerda el
+// estado en este navegador. El grupo de la sección actual se abre al entrar en ella.
+const NAV_GROUPS_KEY = "aletheia.nav.closed";
+const closedGroups = new Set((() => { try { return JSON.parse(localStorage.getItem(NAV_GROUPS_KEY) || "[]"); } catch { return []; } })());
+function setGroup(row, open, remember = true) {
+  const sub = document.getElementById(row.querySelector(".nav-toggle").getAttribute("aria-controls"));
+  row.classList.toggle("closed", !open);
+  sub.hidden = !open;
+  row.querySelector(".nav-toggle").setAttribute("aria-expanded", String(open));
+  if (!remember) return;
+  if (open) closedGroups.delete(row.dataset.group); else closedGroups.add(row.dataset.group);
+  try { localStorage.setItem(NAV_GROUPS_KEY, JSON.stringify([...closedGroups])); } catch { /* idem */ }
+}
+function wireNavGroups() {
+  document.querySelectorAll(".nav-row").forEach((row) => {
+    const toggle = row.querySelector(".nav-toggle");
+    toggle.setAttribute("aria-label", t("nav.toggle_group", { name: row.querySelector(".nav-parent").textContent.trim() }));
+    toggle.addEventListener("click", () => setGroup(row, row.classList.contains("closed")));
+    setGroup(row, !closedGroups.has(row.dataset.group), false);
+  });
+}
+const openGroupOf = (key) => {
+  const row = document.querySelector(`.nav-row[data-group="${key}"]`);
+  if (row && row.classList.contains("closed")) setGroup(row, true);
+};
 document.getElementById("collapse").addEventListener("click", () => {
   shell.classList.toggle("collapsed");
   try { localStorage.setItem("aletheia.sidebar", shell.classList.contains("collapsed") ? "collapsed" : "open"); } catch { /* idem */ }
@@ -1015,5 +1042,6 @@ await loadHelp();
 translateStatic();
 document.getElementById("auth-lang").appendChild(langSwitch());
 decorateNav();
+wireNavGroups();
 window.addEventListener("hashchange", route);
 route();

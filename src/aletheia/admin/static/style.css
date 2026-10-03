@@ -278,6 +278,12 @@ select.lang-switch { width: auto; padding: 3px 8px; font-size: 12px; color: var(
 
 /* Menú anidado: subopciones bajo Credenciales y Plantillas. */
 .nav a.nav-parent.open { color: var(--fg); }
+.nav-row { display: flex; align-items: center; }
+.nav-row .nav-parent { flex: 1; min-width: 0; }
+.nav-toggle { flex: 0 0 auto; width: 26px; height: 26px; padding: 0; justify-content: center; background: transparent; border: 0; color: var(--muted); font-size: 12px; font-weight: 400; transition: transform .15s; }
+.nav-toggle:hover { background: var(--surface-hover); color: var(--fg); }
+.nav-row.closed .nav-toggle { transform: rotate(-90deg); }
+.shell.collapsed .nav-toggle { display: none; }
 .nav-sub { display: flex; flex-direction: column; margin: 0 0 4px 22px; padding-left: 10px; border-left: 1px solid var(--line); }
 .nav-sub a { padding: 5px 10px; font-size: 12.5px; }
 .shell.collapsed .nav-sub { display: none; }
