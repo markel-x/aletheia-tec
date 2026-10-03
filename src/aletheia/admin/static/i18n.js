@@ -79,12 +79,16 @@ export function langSwitch() {
   return select;
 }
 
-// Textos fijos del HTML: data-i18n (contenido) y data-i18n-<atributo> (atributos).
+// Textos fijos del HTML: data-i18n (texto), data-i18n-html (texto con marcado del propio
+// catálogo, de confianza) y data-i18n-<atributo> (atributos).
 export function translateStatic(root = document) {
   root.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  root.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
   root.querySelectorAll("*").forEach((el) => {
     for (const { name, value } of [...el.attributes]) {
-      if (name.startsWith("data-i18n-")) el.setAttribute(name.slice("data-i18n-".length), t(value));
+      if (name.startsWith("data-i18n-") && name !== "data-i18n-html") {
+        el.setAttribute(name.slice("data-i18n-".length), t(value));
+      }
     }
   });
 }

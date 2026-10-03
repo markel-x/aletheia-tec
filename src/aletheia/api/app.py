@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from .. import __version__
+from ..access import router as access_router
 from ..admin import router as admin_router
 from ..authz import router as authz_router
 from ..issuance import oid4vci as oid4vci_router
@@ -95,4 +96,5 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
     app.include_router(oid4vp_verifier.public_router)
     app.include_router(admin_router.router)
     app.include_router(passes_router.router)
+    app.include_router(access_router.router)
     return app

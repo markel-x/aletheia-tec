@@ -52,6 +52,7 @@ def clean_db(migrated_database_url: str) -> None:
         "user_account",
         "organization",
         "rate_limit_bucket",
+        "access_request",
         "idempotency_record",
         "oid4vci_nonce",
     )

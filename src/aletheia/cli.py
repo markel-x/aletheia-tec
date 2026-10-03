@@ -190,6 +190,8 @@ def _run_service_command(args: argparse.Namespace) -> int:
         return 0
     if args.command == "bootstrap":
         return _bootstrap(args, settings)
+    if args.command == "access-requests":
+        return _access_requests(args, settings)
 
     import uvicorn
 
@@ -205,6 +207,42 @@ def _run_service_command(args: argparse.Namespace) -> int:
         server_header=False,
         date_header=False,
     )
+    return 0
+
+
+def _access_requests(args: argparse.Namespace, settings: Any) -> int:
+    """Solicitudes de la página de inicio: listar (JSON por línea) o marcar como resueltas.
+
+    Aprobar no crea la organización: el operador la crea con ``bootstrap`` y luego la marca."""
+    from .access import service as access
+    from .platform.db import Database
+
+    db = Database(settings)
+    try:
+        with db.session(bypass_rls=True) as session:
+            if args.mark:
+                request_id, status = args.mark
+                item = access.mark(session, request_id, status)
+                print(json.dumps({"id": str(item.id), "status": item.status}))
+                return 0
+            for item in access.list_requests(session, args.status):
+                print(
+                    json.dumps(
+                        {
+                            "id": str(item.id),
+                            "created_at": item.created_at.isoformat(),
+                            "organization": item.organization,
+                            "contact_name": item.contact_name,
+                            "email": item.email,
+                            "website": item.website,
+                            "language": item.language,
+                            "use_case": item.use_case,
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+    finally:
+        db.dispose()
     return 0
 
 
@@ -266,12 +304,19 @@ def main(argv: list[str] | None = None) -> int:
         default="ALETHEIA_BOOTSTRAP_PASSWORD",
         help="variable de entorno con la contraseña (nunca se pasa por argumento)",
     )
+    reqs = sub.add_parser(
+        "access-requests", help="solicitudes de acceso de la página de inicio (listar o resolver)"
+    )
+    reqs.add_argument("--status", default="pending", choices=["pending", "approved", "rejected"])
+    reqs.add_argument(
+        "--mark", nargs=2, metavar=("ID", "STATUS"), help="marca una solicitud: approved | rejected"
+    )
     args = parser.parse_args(argv)
 
     if args.command == "version":
         print(json.dumps({"version": __version__, "profile": PROFILE_ID}))
         return 0
-    if args.command in {"api", "migrate", "maintenance", "bootstrap"}:
+    if args.command in {"api", "migrate", "maintenance", "bootstrap", "access-requests"}:
         return _run_service_command(args)
 
     environment = os.environ.get("ALETHEIA_ENV", "production")

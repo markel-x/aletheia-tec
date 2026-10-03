@@ -127,5 +127,17 @@ def run_maintenance(session: Session, now: datetime | None = None) -> dict[str, 
         delete(models.UsageEvent).where(models.UsageEvent.occurred_at < now - timedelta(days=730)),
     )
 
+    # Solicitudes de acceso (datos de contacto): resueltas, 180 días; sin resolver, 1 año.
+    counts["access_requests"] = _affected(
+        session,
+        delete(models.AccessRequest).where(
+            (
+                (models.AccessRequest.status != "pending")
+                & (models.AccessRequest.processed_at < now - timedelta(days=180))
+            )
+            | (models.AccessRequest.created_at < now - timedelta(days=365))
+        ),
+    )
+
     log.info("maintenance finished", extra=counts)
     return counts

@@ -528,3 +528,21 @@ class RateLimitBucket(Base):
     subject: Mapped[str] = mapped_column(Text, primary_key=True)
     window_start: Mapped[datetime] = mapped_column(primary_key=True)
     count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+
+
+class AccessRequest(Base):
+    """Solicitud de acceso desde la página de inicio (revisión manual; sin organización)."""
+
+    __tablename__ = "access_request"
+    __table_args__ = (Index("access_request_status_created_idx", "status", "created_at"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    organization: Mapped[str] = mapped_column(Text)
+    contact_name: Mapped[str] = mapped_column(Text)
+    email: Mapped[str] = mapped_column(CITEXT)
+    use_case: Mapped[str] = mapped_column(Text)
+    website: Mapped[str | None] = mapped_column(Text)
+    language: Mapped[str] = mapped_column(Text, server_default=text("'es'"))
+    status: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))
+    created_at: Mapped[datetime] = _created_at()
+    processed_at: Mapped[datetime | None]

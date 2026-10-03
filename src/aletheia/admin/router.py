@@ -39,6 +39,12 @@ def _serve(name: str) -> Response:
     )
 
 
+@router.get("/", include_in_schema=False)
+def home() -> Response:
+    """Página de inicio pública de CredoSeal."""
+    return serve_static("landing.html")
+
+
 @router.get("/admin")
 def admin_root() -> Response:
     return RedirectResponse("/admin/", status_code=308)
