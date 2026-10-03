@@ -12,6 +12,8 @@ locals {
     { name = "ALETHEIA_SIGNING_BACKEND", value = "aws_kms" },
     { name = "ALETHEIA_AWS_REGION", value = data.aws_region.current.region },
     { name = "ALETHEIA_KMS_DATA_KEY_ID", value = aws_kms_key.claims.arn },
+    # Sólo el ALB (dentro de la VPC) puede declarar la IP del cliente en X-Forwarded-For.
+    { name = "ALETHEIA_FORWARDED_ALLOW_IPS", value = var.vpc_cidr },
   ]
 
   verifier_secrets = var.verifier_identity_secret_arn == "" ? [] : [

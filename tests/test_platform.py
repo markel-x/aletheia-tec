@@ -146,3 +146,39 @@ def test_database_password_overrides_dsn() -> None:
 
     assert make_url(url).password == "s3cr3t/with:chars@"
     assert "s3cr3t" not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    ("forwarded_for", "expected"),
+    [
+        # El ALB agrega la IP real al final: la que pone el cliente al principio no cuenta.
+        (b"6.6.6.6, 203.0.113.9", "203.0.113.9"),
+        (b"203.0.113.9", "203.0.113.9"),
+    ],
+)
+def test_client_ip_comes_from_the_load_balancer_not_the_client(
+    forwarded_for: bytes, expected: str
+) -> None:
+    import asyncio
+
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+    from aletheia.authz.service import network_prefix
+
+    seen: dict[str, str] = {}
+
+    async def app(scope: dict, receive: object, send: object) -> None:
+        seen["client"] = scope["client"][0]
+
+    trusted = Settings().forwarded_allow_ips  # por defecto: redes privadas, nunca "*"
+    staging = ProxyHeadersMiddleware(app, trusted_hosts=trusted)  # type: ignore[arg-type]
+
+    def client_seen(peer: str, header: bytes) -> str:
+        scope = {"type": "http", "client": (peer, 1234), "headers": [(b"x-forwarded-for", header)]}
+        asyncio.run(staging(scope, None, None))  # type: ignore[arg-type]
+        return seen["client"]
+
+    assert client_seen("10.40.3.7", forwarded_for) == expected
+    # Desde fuera de la VPC la cabecera se ignora por completo.
+    assert client_seen("198.51.100.4", b"6.6.6.6") == "198.51.100.4"
+    assert network_prefix("2001:db8:1:2::5", ipv6_bits=48) == "2001:db8:1::/48"

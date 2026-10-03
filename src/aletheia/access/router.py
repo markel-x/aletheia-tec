@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 from ..api.deps import EncryptorDep, SystemSessionDep
 from ..api.routing import TransactionalRoute
 from ..authz.service import network_prefix
+from ..platform.errors import NotFound
 from . import demo, service
 
 router = APIRouter(route_class=TransactionalRoute, tags=["public"])
@@ -60,6 +61,7 @@ def create_access_request(
 # ---------------------------------------------------------------------------
 class DemoStatus(BaseModel):
     enabled: bool
+    form_token: str | None = None
 
 
 class DemoCreate(BaseModel):
@@ -68,6 +70,9 @@ class DemoCreate(BaseModel):
         default=None, max_length=40, pattern=r"^[^\W\d_]+(?:[ .'-]+[^\W\d_]+)*\.?$"
     )
     language: Literal["es", "en"] = "es"
+    form_token: str | None = Field(default=None, max_length=100)
+    # Campo trampa, como en la solicitud de acceso.
+    nickname: str | None = Field(default=None, max_length=200)
 
 
 class DemoOfferResponse(BaseModel):
@@ -80,8 +85,10 @@ class DemoOfferResponse(BaseModel):
 
 @router.get("/public/demo", response_model=DemoStatus)
 def demo_status(request: Request, session: SystemSessionDep) -> DemoStatus:
-    org = demo.demo_organization(session, request.app.state.settings)
-    return DemoStatus(enabled=org is not None)
+    settings = request.app.state.settings
+    if demo.demo_organization(session, settings) is None:
+        return DemoStatus(enabled=False)
+    return DemoStatus(enabled=True, form_token=demo.form_token(settings))
 
 
 @router.post(
@@ -93,13 +100,18 @@ def create_demo_credential(
     body: DemoCreate, request: Request, session: SystemSessionDep, encryptor: EncryptorDep
 ) -> DemoOfferResponse:
     settings = request.app.state.settings
+    if demo.demo_organization(session, settings) is None:
+        raise NotFound("Demo not available")
+    if body.nickname:
+        raise demo.InvalidDemoForm("Invalid form")
+    demo.check_form_token(settings, body.form_token)
     created = demo.create_demo_offer(
         session,
         settings,
         encryptor,
         given_name=(body.given_name or "").strip() or None,
         language=body.language,
-        network=network_prefix(request.client.host if request.client else None),
+        network=network_prefix(request.client.host if request.client else None, ipv6_bits=48),
     )
     issued = created.offer.issuance
     claim_url = f"{settings.public_base}/claim/{issued.offer_id.hex()}"

@@ -82,9 +82,13 @@ function withoutDemo() {
   hero.textContent = t("home.hero.secondary");
 }
 
+// El token del formulario (firmado con la hora de carga) se exige al generar: filtra envíos
+// automáticos que no pasan por la página.
+let formToken = null;
 fetch("/public/demo")
   .then((r) => (r.ok ? r.json() : { enabled: false }))
-  .then(({ enabled }) => {
+  .then(({ enabled, form_token }) => {
+    formToken = form_token;
     if (enabled) demoSection.hidden = false;
     else withoutDemo();
   })
@@ -107,7 +111,12 @@ demoForm.addEventListener("submit", async (ev) => {
     const res = await fetch("/public/demo-credential", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ given_name: nameInput.value.trim() || null, language: lang }),
+      body: JSON.stringify({
+        given_name: nameInput.value.trim() || null,
+        language: lang,
+        form_token: formToken,
+        nickname: document.getElementById("demo-nickname").value || null,
+      }),
     });
     if (res.status === 201) {
       const offer = await res.json();
@@ -125,6 +134,8 @@ demoForm.addEventListener("submit", async (ev) => {
       sayDemo(t("home.demo.invalid_name"), "error");
     } else if (res.status === 429) {
       sayDemo(t("home.demo.rate_limited"), "error");
+    } else if (res.status === 400) {
+      sayDemo(t("home.demo.too_fast"), "error");
     } else {
       sayDemo(t("home.demo.error"), "error");
     }

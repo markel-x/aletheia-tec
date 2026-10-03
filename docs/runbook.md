@@ -78,4 +78,10 @@ La contraseña se entrega al propietario por un canal seguro y se borra el secre
 3. `demo_organization = "org_…"` en el `.tfvars` del entorno y `terraform apply`. Sin esa variable,
    la sección queda oculta y `/public/demo-credential` responde 404.
 
-Límites: 5 por red (/24, /64) por hora y `ALETHEIA_DEMO_DAILY_LIMIT` (300) por día en total.
+Contra el abuso: 5 por red (/24 en IPv4, /48 en IPv6) por hora; `ALETHEIA_DEMO_DAILY_LIMIT` (300)
+por día en total; token del formulario firmado con la hora de carga (mínimo 2 s, máximo 2 h) y
+campo trampa. El pase se titula «DEMO · Credencial de muestra».
+
+<a id="demo"></a>**Alarma `…-demo-daily-limit`**: se alcanzó el tope diario y los visitantes reciben
+«vuelva más tarde» hasta el día siguiente. Mirar en los registros si las ofertas vienen de pocas
+redes (abuso: bloquearlas con una regla de AWS WAF) o de muchas (interés real: subir el tope).

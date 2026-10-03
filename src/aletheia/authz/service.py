@@ -61,15 +61,16 @@ def verify_password(password_hash: str, password: str) -> bool:
         return False
 
 
-def network_prefix(host: str | None) -> str | None:
-    """/24 para IPv4, /64 para IPv6: suficiente para limitar, no identifica a una persona."""
+def network_prefix(host: str | None, ipv6_bits: int = 64) -> str | None:
+    """/24 para IPv4, /64 para IPv6: suficiente para limitar, no identifica a una persona.
+    Con ``ipv6_bits=48`` se agrupa por sitio: un mismo cliente suele tener miles de /64."""
     if not host:
         return None
     try:
         address = ipaddress.ip_address(host)
     except ValueError:
         return None
-    bits = 24 if address.version == 4 else 64
+    bits = 24 if address.version == 4 else ipv6_bits
     return str(ipaddress.ip_network(f"{address}/{bits}", strict=False))
 
 

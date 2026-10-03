@@ -367,3 +367,8 @@ figure { margin: 0; }
 @media (max-width: 600px) { .head-lang svg { display: none; } }
 .site-nav a, .head-cta .btn { white-space: nowrap; }
 @media (max-width: 1320px) and (min-width: 1181px) { .site-nav { gap: 18px; } .head-row { gap: 20px; } }
+.ph-title { grid-column: 1 / -1; font: 600 11.5px var(--mono); letter-spacing: .06em; color: #ffb366; }
+.ph-pass { grid-template-rows: auto auto 1fr auto; }
+.ph-name { grid-row: 3; }
+.ph-id { grid-row: 4; }
+.ph-qr { grid-row: 3 / 5; }

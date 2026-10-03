@@ -134,3 +134,31 @@ resource "aws_cloudwatch_metric_alarm" "maintenance_missing" {
   alarm_actions       = local.alarm_actions
   ok_actions          = local.alarm_actions
 }
+
+# «Pruébelo ahora»: el tope diario se alcanzó (abuso, o la demo funciona mejor de lo previsto).
+# Los visitantes reales reciben 429 hasta el día siguiente; ver docs/runbook.md#demo.
+resource "aws_cloudwatch_log_metric_filter" "demo_daily_limit" {
+  name           = "${local.name}-demo-daily-limit"
+  log_group_name = aws_cloudwatch_log_group.app.name
+  pattern        = "{ $.msg = \"demo daily limit reached\" }"
+  metric_transformation {
+    name          = "DemoDailyLimitReached"
+    namespace     = "CredoSeal/${var.environment}"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "demo_daily_limit" {
+  alarm_name          = "${local.name}-demo-daily-limit"
+  alarm_description   = "La demo de la página de inicio alcanzó su tope diario (runbook: docs/runbook.md#demo)"
+  namespace           = "CredoSeal/${var.environment}"
+  metric_name         = aws_cloudwatch_log_metric_filter.demo_daily_limit.metric_transformation[0].name
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = local.alarm_actions
+}

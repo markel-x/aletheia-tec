@@ -205,7 +205,7 @@ def _run_service_command(args: argparse.Namespace) -> int:
         port=args.port,
         log_config=None,  # el logging lo configura la aplicación
         proxy_headers=True,
-        forwarded_allow_ips="*",  # detrás del ALB; en local no hay proxy
+        forwarded_allow_ips=settings.forwarded_allow_ips,  # sólo el ALB (ver config.py)
         server_header=False,
         date_header=False,
     )

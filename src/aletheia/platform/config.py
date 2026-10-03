@@ -99,6 +99,12 @@ class Settings(BaseSettings):
     google_wallet_service_account: SecretStr | None = None
     """JSON de la clave de la cuenta de servicio con acceso a la API de Google Wallet."""
 
+    forwarded_allow_ips: str = "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    """Proxies cuyo ``X-Forwarded-For`` se cree (IPs o redes, separadas por comas): uvicorn toma
+    la última dirección no confiable, la que agregó el ALB. Por defecto, las redes privadas (en
+    ECS sólo el ALB llega a la tarea); Terraform la acota a la VPC. Nunca ``*``: con eso gana la
+    primera, que escribe el cliente, y cualquiera evade los límites por red falsificándola."""
+
     demo_organization: str | None = None
     """``public_id`` de la organización de demostración. Si está definida, la página de inicio
     ofrece «Pruébelo ahora»: cualquiera obtiene una credencial de muestra de esa organización
