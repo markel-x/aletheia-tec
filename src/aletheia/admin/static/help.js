@@ -17,7 +17,8 @@ export const FIELD_HELP = {
   "offer.holder_reference": `Un identificador <b>suyo</b> para encontrar luego esta credencial (por ejemplo, el número
     de legajo). Es opcional y opaco: <b>no use correos ni datos personales</b>. Máximo 128 caracteres.
     <br>Ejemplo: <code>LEG-2026-00412</code>`,
-  "offer.claims": `Los datos de la credencial en formato JSON, con los campos que define la plantilla elegida.
+  "offer.claims": `Los datos de la credencial, con los campos que define la plantilla elegida. En <b>Formulario</b> se
+    completan campo por campo; en <b>JSON</b> se escriben o pegan directamente (ambos modos se mantienen sincronizados).
     Debajo se listan los campos (los marcados con * son obligatorios) y puede insertar un ejemplo para completar.
     <ul><li>Texto entre comillas: <code>"Ana"</code>.</li>
     <li>Números sin comillas: <code>40</code>.</li>
@@ -29,7 +30,9 @@ export const FIELD_HELP = {
     o número; hasta 63 caracteres. Forma parte del <b>tipo</b> de la credencial (<code>vct</code>) y no se puede
     cambiar después.<br>Ejemplos: <code>certificado-curso</code>, <code>diploma-grado</code>.`,
   "template.name": `Nombre legible para usted y su equipo. Ejemplo: <code>Certificado de finalización de curso</code>.`,
-  "version.claims_schema": `Describe los datos de la credencial con un JSON Schema restringido:
+  "version.claims_schema": `Los campos que tendrá cada credencial. En <b>Formulario</b> agregue campos y elija su tipo,
+    si son obligatorios y si el titular puede ocultarlos (esto completa también el campo de abajo). En <b>JSON</b> se
+    edita directamente un JSON Schema restringido:
     <ul><li>Tipos: <code>object</code>, <code>string</code>, <code>integer</code>, <code>number</code>,
       <code>boolean</code> y <code>date</code> (fecha AAAA-MM-DD).</li>
     <li>Restricciones: <code>required</code>, <code>minLength</code>/<code>maxLength</code>,

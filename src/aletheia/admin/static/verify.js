@@ -1,34 +1,20 @@
 // Verificación del QR de un pase: el token llega en el fragmento (#…), que el navegador
 // no envía al servidor; se manda en el cuerpo de una petición POST y no queda en registros.
 
+import { claimLabel, fmtDate, fmtDateTime, langSwitch, t, translateStatic } from "./i18n.js";
+
+translateStatic();
+document.getElementById("holder-lang").appendChild(langSwitch());
+document.title = t("verify.page_title");
+
 const root = document.getElementById("verify");
 const esc = (v) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const date = (s) => (s ? new Date(s * 1000).toLocaleDateString("es-UY", { dateStyle: "long" }) : "—");
-// Mismas etiquetas que el pase (passes/builder.py); el resto se deriva del nombre del campo.
-const LABELS = {
-  "given_name": "Nombre",
-  "family_name": "Apellido",
-  "course": "Curso",
-  "course.title": "Curso",
-  "course.hours": "Horas",
-  "course.grade": "Calificación",
-  "completion_date": "Fecha de finalización",
-  "student_id": "Legajo",
-  "birth_date": "Fecha de nacimiento",
-  "honors": "Con honores",
-};
-const label = (k) => LABELS[k] || k.replace(/\./g, " · ").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
-
-const REASONS = {
-  credential_revoked: "El emisor revocó esta credencial.",
-  credential_expired: "La credencial venció.",
-  issuer_not_trusted: "La emite una organización que no está alojada en este servicio.",
-  signature_invalid: "La credencial fue alterada: la firma del emisor no coincide.",
-  issuer_key_compromised: "La clave del emisor fue declarada comprometida.",
-  holder_bound_credential: "Esta credencial debe presentarse desde la wallet de su titular, no como código QR.",
-  malformed: "El código no contiene una credencial válida.",
-};
+const date = (s) => (s ? fmtDate(s * 1000) : "—");
+// Etiquetas del catálogo (claim.*); el resto se deriva del nombre del campo.
+const label = (k) => claimLabel(k, k.replace(/\./g, " · "));
+const REASONS = ["credential_revoked", "credential_expired", "issuer_not_trusted", "signature_invalid",
+  "issuer_key_compromised", "holder_bound_credential", "malformed"];
 
 function flatten(obj, prefix = "") {
   return Object.entries(obj || {}).flatMap(([k, v]) =>
@@ -41,7 +27,7 @@ async function main() {
   // Se quita el token de la barra de direcciones y del historial.
   history.replaceState(null, "", location.pathname);
   if (!token) {
-    root.innerHTML = `<h1>Verificar una credencial</h1><p>Escanee con la cámara el código QR del pase de la credencial.</p>`;
+    root.innerHTML = `<h1>${t("verify.empty_title")}</h1><p>${t("verify.empty_body")}</p>`;
     return;
   }
   const res = await fetch("/public/pass-verifications", {
@@ -53,21 +39,21 @@ async function main() {
   const r = await res.json();
   const ok = r.result === "valid";
   const state = ok ? "valid" : r.result === "indeterminate" ? "indeterminate" : "invalid";
-  const title = { valid: "Credencial válida", invalid: "Credencial NO válida", indeterminate: "No se pudo verificar" }[state];
+  const title = t(`verify.state.${state}`);
   const rows = ok ? flatten(r.claims).map(([k, v]) => `<tr><th>${esc(label(k))}</th><td>${esc(v)}</td></tr>`).join("") : "";
   root.innerHTML = `
     <div class="verdict ${state}"><span class="verdict-icon" aria-hidden="true">${ok ? "✓" : state === "indeterminate" ? "?" : "✕"}</span>
       <div><h1>${esc(title)}</h1>
-      <p>${ok ? "Firmada por el emisor y vigente en este momento." : esc(REASONS[r.reason] || (state === "indeterminate" ? "No se pudo consultar el estado. Inténtelo más tarde; no la acepte mientras tanto." : "No la acepte."))}</p></div></div>
-    ${r.issuer_name ? `<p class="lead"><b>${esc(r.credential_name || "Credencial")}</b><br>emitida por <b>${esc(r.issuer_name)}</b></p>` : ""}
+      <p>${ok ? t("verify.valid_body") : esc(REASONS.includes(r.reason) ? t(`verify.reason.${r.reason}`) : state === "indeterminate" ? t("verify.indeterminate_body") : t("verify.reject"))}</p></div></div>
+    ${r.issuer_name ? `<p class="lead">${t("claim.lead_html", { credential: esc(r.credential_name || t("col.credential")), issuer: esc(r.issuer_name) })}</p>` : ""}
     ${ok ? `<table class="claims">${rows}
-      <tr><th>Emitida</th><td>${esc(date(r.issued_at))}</td></tr>
-      <tr><th>Válida hasta</th><td>${esc(date(r.expires_at))}</td></tr></table>
-      <p class="note">Compruebe que los datos coinciden con la persona o el documento que tiene delante. Verificado: ${esc(new Date(r.checked_at * 1000).toLocaleString("es-UY", { dateStyle: "long", timeStyle: "short" }))}</p>` : ""}
-    <details class="field-help"><summary>Detalle técnico</summary><div class="help-panel">
+      <tr><th>${t("verify.issued")}</th><td>${esc(date(r.issued_at))}</td></tr>
+      <tr><th>${t("verify.valid_until")}</th><td>${esc(date(r.expires_at))}</td></tr></table>
+      <p class="note">${t("verify.check_person", { date: esc(fmtDateTime(r.checked_at * 1000, { dateStyle: "long", timeStyle: "short" })) })}</p>` : ""}
+    <details class="field-help"><summary>${t("verify.technical")}</summary><div class="help-panel">
       ${r.checks.map((c) => `<div><code>${esc(c.name)}</code>: ${esc(c.outcome)} (${esc(c.code)})</div>`).join("")}</div></details>`;
 }
 
 main().catch(() => {
-  root.innerHTML = `<div class="verdict indeterminate"><span class="verdict-icon">?</span><div><h1>No se pudo verificar</h1><p>Inténtelo de nuevo en unos minutos. No acepte la credencial mientras tanto.</p></div></div>`;
+  root.innerHTML = `<div class="verdict indeterminate"><span class="verdict-icon">?</span><div><h1>${t("verify.state.indeterminate")}</h1><p>${t("verify.failed_body")}</p></div></div>`;
 });

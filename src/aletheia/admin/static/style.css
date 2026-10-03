@@ -246,3 +246,32 @@ pre { background: var(--bg); border: 1px solid var(--line); color: var(--fg-2); 
 .holder-card table.claims th, .holder-card table.claims td { border-bottom-color: #eef1f3; }
 .holder-card table.claims tbody tr:hover, .holder-card table.claims tr:hover { background: transparent; }
 .holder-card .help-panel code { color: #1d252c; }
+
+/* Editores visuales de JSON (editors.js): interruptor Formulario | JSON, datos del titular y esquema. */
+.editor-switch { display: inline-flex; margin: 4px 0 8px; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; }
+.editor-switch button { background: transparent; color: var(--fg-2); border: 0; border-radius: 0; padding: 4px 12px; font-weight: 500; }
+.editor-switch button + button { border-left: 1px solid var(--line-strong); }
+.editor-switch button.active { background: var(--accent-soft); color: var(--fg); }
+.visual-editor { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; background: var(--surface-2); margin-bottom: 4px; }
+.visual-editor .claim-field { margin-bottom: 10px; }
+.visual-editor .hint { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.visual-editor .req { color: var(--warn-fg); }
+.visual-editor fieldset { border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 8px 12px 2px; margin: 0 0 10px; }
+.visual-editor legend { padding: 0 6px; color: var(--fg-2); font-weight: 600; }
+.schema-field { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.schema-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(130px, 1fr) auto auto auto; gap: 8px; align-items: end; }
+.schema-row label, .schema-options label { font-size: 12px; color: var(--fg-2); margin: 0; }
+.schema-row label.check { display: flex; align-items: center; white-space: nowrap; padding-bottom: 7px; }
+.schema-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-top: 6px; }
+.schema-group { margin: 8px 0 0 16px; padding-left: 12px; border-left: 2px solid var(--accent-soft); }
+.schema-editor > button, .schema-group > button { margin-top: 8px; }
+input.invalid { border-color: var(--bad); }
+.field-error { color: var(--bad-fg); font-size: 11px; margin: 4px 0 0; }
+button.small { padding: 4px 10px; font-size: 12px; }
+@media (max-width: 760px) {
+  .schema-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* Selector de idioma (i18n.js): barra superior, pie del acceso y páginas del titular. */
+select.lang-switch { width: auto; padding: 3px 8px; font-size: 12px; color: var(--fg-2); background: var(--surface); border-color: var(--line-strong); border-radius: 999px; cursor: pointer; }
+.auth-footer #auth-lang, .auth-footer #holder-lang { margin-left: auto; }

@@ -15,37 +15,38 @@
       <nav>
         <a href="/docs" target="_blank" rel="noopener">API</a>
       </nav>
-      <span>Aletheia · credenciales verificables</span>
+      <span data-i18n="footer.tagline">Aletheia · credenciales verificables</span>
+      <span id="auth-lang"></span>
     </footer>
   </div>
 
   <!-- Aplicación -->
   <div id="shell" class="shell" hidden>
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#/overview" aria-label="Aletheia · inicio">
+      <a class="brand" href="#/overview" aria-label="Aletheia · inicio" data-i18n-aria-label="nav.home">
         <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M16 2 28 8v8c0 7.2-5 12.6-12 14C9 28.6 4 23.2 4 16V8z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
           <path d="m10.5 16.2 3.8 3.8 7.4-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="brand-name">aletheia</span>
       </a>
-      <nav id="nav" class="nav" aria-label="Principal">
-        <a href="#/overview" data-icon="grid">Resumen</a>
-        <a href="#/credentials" data-icon="badge">Credenciales</a>
-        <a href="#/templates" data-icon="layers">Plantillas</a>
-        <a href="#/verify" data-icon="check">Verificación</a>
-        <span class="nav-group">Organización</span>
-        <a href="#/members" data-icon="users">Miembros</a>
-        <a href="#/api-clients" data-icon="key">Claves de API</a>
-        <a href="#/signing-keys" data-icon="pen">Claves de firma</a>
-        <a href="#/audit" data-icon="list">Auditoría</a>
-        <a href="#/usage" data-icon="chart">Consumo</a>
+      <nav id="nav" class="nav" aria-label="Principal" data-i18n-aria-label="nav.main">
+        <a href="#/overview" data-icon="grid" data-i18n="nav.overview">Resumen</a>
+        <a href="#/credentials" data-icon="badge" data-i18n="nav.credentials">Credenciales</a>
+        <a href="#/templates" data-icon="layers" data-i18n="nav.templates">Plantillas</a>
+        <a href="#/verify" data-icon="check" data-i18n="nav.verify">Verificación</a>
+        <span class="nav-group" data-i18n="nav.organization">Organización</span>
+        <a href="#/members" data-icon="users" data-i18n="nav.members">Miembros</a>
+        <a href="#/api-clients" data-icon="key" data-i18n="nav.api_clients">Claves de API</a>
+        <a href="#/signing-keys" data-icon="pen" data-i18n="nav.signing_keys">Claves de firma</a>
+        <a href="#/audit" data-icon="list" data-i18n="nav.audit">Auditoría</a>
+        <a href="#/usage" data-icon="chart" data-i18n="nav.usage">Consumo</a>
       </nav>
       <div class="sidebar-footer">
-        <a href="#/help" data-icon="help">Ayuda</a>
+        <a href="#/help" data-icon="help" data-i18n="nav.help">Ayuda</a>
         <a href="/docs" target="_blank" rel="noopener" data-icon="code">API</a>
         <div id="who" class="who"></div>
-        <button type="button" class="collapse" id="collapse" aria-label="Contraer menú" title="Contraer menú">⇤</button>
+        <button type="button" class="collapse" id="collapse" aria-label="Contraer menú" title="Contraer menú" data-i18n-aria-label="nav.collapse" data-i18n-title="nav.collapse">⇤</button>
       </div>
     </aside>
     <div class="main">
@@ -53,7 +54,7 @@
         <div class="crumbs" id="crumbs"></div>
         <div class="topbar-right" id="topbar-right"></div>
       </header>
-      <main id="app" class="content"><p class="muted">Cargando…</p></main>
+      <main id="app" class="content"><p class="muted" data-i18n="common.loading">Cargando…</p></main>
     </div>
   </div>
 
