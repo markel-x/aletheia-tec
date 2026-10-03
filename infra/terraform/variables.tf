@@ -102,6 +102,12 @@ variable "alarm_email" {
   default     = ""
 }
 
+variable "site_auth_secret_arn" {
+  description = "Secreto con usuario:contrasena para restringir temporalmente el sitio (HTTP Basic en las paginas para personas). Vacio: sitio abierto."
+  type        = string
+  default     = ""
+}
+
 variable "google_wallet_issuer_id" {
   description = "Issuer ID de la consola de Google Pay & Wallet. Vacio: sin entrega por Google Wallet (ADR-0017)."
   type        = string

@@ -31,6 +31,7 @@ from ..platform.db import Database
 from ..platform.errors import install_error_handlers
 from ..platform.logging import configure_logging
 from ..platform.middleware import RequestContextMiddleware
+from ..platform.site_gate import SiteGateMiddleware
 from ..status import router as status_router
 from ..usage import router as usage_router
 from ..verification import oid4vp as oid4vp_verifier
@@ -82,6 +83,11 @@ def create_app(settings: Settings | None = None, *, kms_client: Any | None = Non
         openapi_url=None if settings.env.is_deployed else "/openapi.json",
     )
     app.add_middleware(RequestContextMiddleware)
+    if settings.site_basic_auth is not None:
+        # Por fuera de todo: responde 401 antes de tocar la base o los registros de la app.
+        app.add_middleware(
+            SiteGateMiddleware, credentials=settings.site_basic_auth.get_secret_value()
+        )
     install_error_handlers(app)
     app.include_router(operations.router)
     app.include_router(authz_router.router)

@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     pass_wwdr_pem: str | None = None
     """Certificado intermedio Apple WWDR (G4) en PEM."""
 
+    site_basic_auth: SecretStr | None = None
+    """``usuario:contraseña``. Si está definida, el sitio pide HTTP Basic en las páginas para
+    personas (acceso restringido temporal antes del lanzamiento). Ver platform/site_gate.py."""
+
     google_wallet_issuer_id: str | None = None
     """Issuer ID de la consola de Google Pay & Wallet. Con la cuenta de servicio habilita
     la entrega como pase de Google Wallet (ADR-0017)."""
