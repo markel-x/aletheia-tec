@@ -587,11 +587,10 @@ def compromise_signing_key(
     return key
 
 
-def published_jwks(
-    session: Session, org_public_id: str, now: datetime | None = None
-) -> dict[str, Any]:
-    """JWKS público del emisor: claves activas y retiradas vigentes; nunca comprometidas."""
-    now = now or datetime.now(UTC)
+def _public_issuer(
+    session: Session, org_public_id: str
+) -> tuple[models.Organization, models.IssuerProfile]:
+    """Organización activa con perfil de emisor habilitado; si no, 404 (sin distinguir por qué)."""
     org = session.scalar(
         select(models.Organization)
         .where(models.Organization.public_id == org_public_id)
@@ -603,6 +602,40 @@ def published_jwks(
     profile = session.get(models.IssuerProfile, org.id)
     if profile is None or not profile.enabled:
         raise NotFound("Issuer not found")
+    return org, profile
+
+
+def public_issuer_info(session: Session, settings: Settings, org_public_id: str) -> dict[str, Any]:
+    """Lo que muestra la página pública del emisor: sólo datos que ya son públicos.
+
+    No afirma que la organización esté verificada: CredoSeal no la ha validado; sólo indica
+    que el emisor está alojado aquí y si tiene claves de firma activas."""
+    org, profile = _public_issuer(session, org_public_id)
+    active = session.scalars(
+        select(models.SigningKey)
+        .where(models.SigningKey.organization_id == org.id)
+        .where(models.SigningKey.state == "active")
+    ).all()
+    well_known, path = f"{settings.public_base}/.well-known", f"/issuers/{org.public_id}"
+    return {
+        "name": profile.display_name or org.name,
+        "issuer": issuer_url(settings, org.public_id),
+        "language": org.default_language,
+        "since": org.created_at.isoformat(),
+        "active_keys": [{"kid": k.kid, "alg": k.alg} for k in active],
+        "metadata": {
+            "jwt_vc_issuer": f"{well_known}/jwt-vc-issuer{path}",
+            "openid_credential_issuer": f"{well_known}/openid-credential-issuer{path}",
+        },
+    }
+
+
+def published_jwks(
+    session: Session, org_public_id: str, now: datetime | None = None
+) -> dict[str, Any]:
+    """JWKS público del emisor: claves activas y retiradas vigentes; nunca comprometidas."""
+    now = now or datetime.now(UTC)
+    org, _ = _public_issuer(session, org_public_id)
     keys = session.scalars(
         select(models.SigningKey)
         .where(models.SigningKey.organization_id == org.id)

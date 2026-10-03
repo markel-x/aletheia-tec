@@ -356,4 +356,16 @@ export const STRINGS = {
   "set.default_validity": { es: "Validez por defecto de las credenciales (días)", en: "Default credential validity (days)" },
   "set.offer_ttl": { es: "Vigencia de las ofertas (horas)", en: "Offer lifetime (hours)" },
   "nav.toggle_group": { es: "Mostrar u ocultar las opciones de {name}", en: "Show or hide the {name} options" },
+  // página pública del emisor
+  "issuer.kicker": { es: "Emisor de credenciales", en: "Credential issuer" },
+  "issuer.hosted_html": { es: "Emisor alojado en <b>CredoSeal</b> desde el {since}.", en: "Issuer hosted on <b>CredoSeal</b> since {since}." },
+  "issuer.keys_active": { es: "Tiene {count} clave(s) de firma activa(s): las credenciales que emite se pueden comprobar.", en: "It has {count} active signing key(s): the credentials it issues can be checked." },
+  "issuer.keys_none": { es: "No tiene claves de firma activas en este momento.", en: "It has no active signing keys at the moment." },
+  "issuer.how_to_verify": { es: "Para comprobar una credencial de este emisor, escanee el código QR de su pase o preséntela desde una wallet compatible: la verificación consulta su firma y si fue revocada.", en: "To check a credential from this issuer, scan the QR code on its pass or present it from a compatible wallet: verification checks its signature and whether it was revoked." },
+  "issuer.not_vetted": { es: "CredoSeal aloja a este emisor pero no certifica la identidad de la organización: compruebe por su cuenta que es quien dice ser.", en: "CredoSeal hosts this issuer but does not certify the organization's identity: confirm independently that it is who it says it is." },
+  "issuer.technical": { es: "Detalle técnico", en: "Technical details" },
+  "issuer.identifier": { es: "Identificador del emisor (iss)", en: "Issuer identifier (iss)" },
+  "issuer.key": { es: "Clave", en: "Key" },
+  "issuer.not_found_title": { es: "Emisor no encontrado", en: "Issuer not found" },
+  "issuer.not_found_body": { es: "Esta dirección no corresponde a un emisor activo en CredoSeal.", en: "This address does not belong to an active issuer on CredoSeal." },
 };

@@ -10,6 +10,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
+from ..admin.router import serve_static
 from ..api.deps import BackendDep, PrincipalDep, SessionDep, SystemSessionDep, require
 from ..api.routing import TransactionalRoute
 from ..audit import service as audit_service
@@ -354,6 +355,22 @@ def list_audit_events(
 # ---------------------------------------------------------------------------
 # Público: metadatos del emisor (ADR-0004)
 # ---------------------------------------------------------------------------
+# Página pública del emisor: la URL ``iss`` de sus credenciales, abierta en un navegador.
+# Los wallets no la usan (leen los metadatos en /.well-known/…).
+@public_router.get("/issuers/{org_public_id}", include_in_schema=False)
+def issuer_page(org_public_id: str) -> Response:
+    return serve_static("issuer.html")
+
+
+@public_router.get("/issuer-info/{org_public_id}")
+def issuer_info(
+    org_public_id: str, request: Request, response: Response, session: SystemSessionDep
+) -> dict[str, Any]:
+    info = service.public_issuer_info(session, _settings(request), org_public_id)
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return info
+
+
 @public_router.get("/.well-known/jwt-vc-issuer/issuers/{org_public_id}")
 def issuer_metadata(
     org_public_id: str, request: Request, response: Response, session: SystemSessionDep
